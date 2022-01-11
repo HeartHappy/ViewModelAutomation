@@ -1,6 +1,8 @@
 package com.hearthappy.processor.log
 
+import com.hearthappy.annotations.Header
 import javax.annotation.processing.ProcessingEnvironment
+import javax.lang.model.element.Element
 import javax.tools.Diagnostic
 
 /**
@@ -16,3 +18,8 @@ fun ProcessingEnvironment.noteMessage(message: () -> String) {
 fun ProcessingEnvironment.errorMessage(message: () -> String) {
     this.messager.printMessage(Diagnostic.Kind.ERROR, message())
 }
+
+
+
+
+

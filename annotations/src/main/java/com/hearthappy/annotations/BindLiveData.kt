@@ -8,10 +8,13 @@ import kotlin.reflect.KClass
  * @Email  1096885636@qq.com
  * ClassDescription :LiveData注解
  */
-@Repeatable @Target(AnnotationTarget.CLASS) @Retention(AnnotationRetention.BINARY)
-annotation class BindLiveData(
-    val methodName: String, //方法名称
-    val responseClass: KClass<out Any>, //网络响应的数据类型
-    val urlClass: KClass<*> = Any::class, //url类
-    val liveDataName: String = "" //需要创建的liveData名称
+
+
+@Repeatable
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.SOURCE)
+annotation class BindLiveData(val methodName: String, //方法名称
+                              val requestClass: KClass<*> = Any::class, //url类
+                              val responseClass: KClass<out Any>, //网络响应的数据类型
+                              val liveDataName: String = "" //需要创建的liveData名称
 )

@@ -1,4 +1,4 @@
-package com.hearthappy.viewmodelexpandsamples.model
+package com.hearthappy.viewmodelautomation.model
 
 import com.hearthappy.ktorexpand.code.network.ktorClient
 import io.ktor.client.request.*

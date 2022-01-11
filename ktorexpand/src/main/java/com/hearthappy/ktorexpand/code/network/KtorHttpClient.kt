@@ -4,16 +4,21 @@ import android.annotation.SuppressLint
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.*
+import io.ktor.client.features.auth.*
+import io.ktor.client.features.auth.providers.*
 import io.ktor.client.features.json.*
 import io.ktor.client.features.logging.*
+import io.ktor.http.*
 import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
 
 fun ktorClient(enableLog: Boolean = true) = HttpClient(CIO) {
+
     engine {
         threadsCount = 4
         pipelining = true
+
         //https认证
         /*https {
             // this: TLSConfigBuilder
@@ -52,6 +57,12 @@ fun ktorClient(enableLog: Boolean = true) = HttpClient(CIO) {
         socketTimeoutMillis = timeout
         connectTimeoutMillis = timeout
     }
+
+   /* install(Auth){
+        bearer {
+            
+        }
+    }*/
 
     if (enableLog) {
         install(Logging) {

@@ -1,4 +1,4 @@
-package com.hearthappy.viewmodelexpandsamples.model.response
+package com.hearthappy.viewmodelautomation.model.response
 
 /**
  * Created Date 2020/11/30.

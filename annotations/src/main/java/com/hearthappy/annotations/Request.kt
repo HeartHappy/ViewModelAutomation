@@ -1,11 +1,10 @@
 package com.hearthappy.annotations
 
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.SOURCE)
-annotation class Request(val urlString:String,val type:RequestType)
 
-enum class RequestType{
-    GET,
-    POST,
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION) @Retention(AnnotationRetention.SOURCE)
+annotation class Request(val type: RequestType = RequestType.GET, val urlString: String)
 
+
+enum class RequestType {
+    GET, POST, FormUrlEncoded, PATCH, DELETE
 }

@@ -8,5 +8,5 @@ package com.hearthappy.annotations
  */
 
 @Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.BINARY)
+@Retention(AnnotationRetention.SOURCE)
 annotation class AndroidViewModel(val viewModelClassName: String="")

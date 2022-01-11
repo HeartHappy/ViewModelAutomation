@@ -3,7 +3,7 @@ package com.hearthappy.ktorexpand.code.network
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.hearthappy.ktorexpand.R
-import com.hearthappy.ktorexpand.tools.MobileInfoUtil
+import com.hearthappy.ktorexpand.tools.CheckNetworkConnect
 import com.hearthappy.ktorexpand.viewmodel.BaseAndroidViewModel
 import kotlinx.coroutines.launch
 
@@ -15,7 +15,7 @@ fun <T> BaseAndroidViewModel.requestScope(
     onSucceed: (T) -> Unit,
     onFailure: (failure: ResponseError) -> Unit,
 ) {
-    if (MobileInfoUtil.getInstance().isNetworkConnected(context)) {
+    if (CheckNetworkConnect.isNetworkConnected(context)) {
         viewModelScope.launch {
             kotlin.runCatching {
                 io()
@@ -30,6 +30,7 @@ fun <T> BaseAndroidViewModel.requestScope(
         onFailure(ResponseError(NETWORK_ERROR, context.getString(R.string.please_check_network)))
     }
 }
+
 
 
 data class ResponseError(val errorCode: Int, val errorMsg: String)
