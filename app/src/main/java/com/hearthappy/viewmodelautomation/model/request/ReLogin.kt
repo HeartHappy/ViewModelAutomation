@@ -12,3 +12,4 @@ import com.hearthappy.annotations.RequestType
 data class ReLogin(@Header("X-Auth-Token") val token: String, @Body val data: Data)
 
 data class Data(val username: String, val password: String)
+
