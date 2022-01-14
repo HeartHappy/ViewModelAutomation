@@ -3,7 +3,8 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'maven-publish'
 }
-
+group("com.hearthappy")
+version("1.0.0")
 // Notice: 2022/1/11 Android依赖发布函数库
 
 task javadoc(type: Javadoc) {
@@ -35,13 +36,14 @@ afterEvaluate {
                     archives(sourceJar)
                 }
             }
-            debug(MavenPublication){
+            //添加如下代码，还会生成一个debug版的库
+            /*debug(MavenPublication){
                 from components.debug
 
                 groupId = 'com.hearthappy.ktorexpand'
-                artifactId = 'ktorexpand-debug'
+                artifactId = 'ktor-expand-debug'
                 version = '1.0.0'
-            }
+            }*/
         }
     }
 }

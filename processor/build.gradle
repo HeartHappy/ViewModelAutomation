@@ -3,6 +3,8 @@ plugins {
     id 'kotlin-kapt'
     id 'maven-publish'
 }
+group("com.hearthappy")
+version("1.0.0")
 
 task sourceJar(type: Jar) {
     from sourceSets.main.allJava
