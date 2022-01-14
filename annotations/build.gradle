@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'kotlin'
+    id 'maven-publish'
 }
 
 java {
@@ -14,4 +15,20 @@ compileKotlin {
 
 compileTestKotlin {
     kotlinOptions.jvmTarget = "11"
+}
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+    archiveClassifier.set("sources")
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.hearthappy'
+            artifactId = 'annotations'
+            version = '1.0.0'
+            artifact sourceJar
+            from components.java
+        }
+    }
 }

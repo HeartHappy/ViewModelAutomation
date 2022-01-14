@@ -52,6 +52,9 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0"
 
     implementation("io.ktor:ktor-client-core:$ktorVersion")
+
+
+
     compileOnly project(path: ':annotations')
     kapt project(path: ':processor')
 }
