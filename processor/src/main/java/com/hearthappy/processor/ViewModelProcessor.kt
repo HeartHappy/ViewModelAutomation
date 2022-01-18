@@ -469,20 +469,17 @@ import kotlin.reflect.KClass
     private fun getRequestBodyParameter(bodyElements: MutableSet<out Element>, requestElement: Element, type: RequestType): String? {
         val bodyElement = bodyElements.find { if (it.kind == ElementKind.CLASS) it.simpleName == requestElement.simpleName else it.enclosingElement.toString().removeWith("(", ")") == requestElement.simpleName.toString() }
         return bodyElement?.run {
-            when (type) {
-                RequestType.PATCH, RequestType.POST -> {
-                    when (this.kind) {
-                        ElementKind.PARAMETER -> {
-                            this.simpleName.toString()
-                        }
-                        ElementKind.CLASS -> {
-                            this.simpleName.toString().replaceFirstChar { it.lowercase(Locale.getDefault()) }
-                        }
-                        else -> null
+            if (type == RequestType.PATCH || type == RequestType.POST) {
+                when (this.kind) {
+                    ElementKind.PARAMETER -> {
+                        this.simpleName.toString()
                     }
+                    ElementKind.CLASS -> {
+                        this.simpleName.toString().replaceFirstChar { it.lowercase(Locale.getDefault()) }
+                    }
+                    else -> null
                 }
-                else -> null
-            }
+            } else null
         }
     }
 
