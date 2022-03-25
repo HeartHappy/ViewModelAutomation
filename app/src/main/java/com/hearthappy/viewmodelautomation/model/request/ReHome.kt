@@ -5,5 +5,5 @@ import com.hearthappy.annotations.Request
 import com.hearthappy.annotations.RequestType
 
 
-@Request(type = RequestType.FormUrlEncoded, "http://192.168.51.212:50006/c-api/user-login-pwd", baseUrlKey = "server")
+@Request(type = RequestType.GET, "/c-api/user-login-pwd", baseUrlKey = "server")
 data class ReHome(@Header("X-Auth-Token") val token: String, val username: String, val password: String)

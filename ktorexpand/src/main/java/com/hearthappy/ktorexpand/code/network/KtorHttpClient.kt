@@ -4,16 +4,14 @@ import android.annotation.SuppressLint
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.*
-import io.ktor.client.features.auth.*
-import io.ktor.client.features.auth.providers.*
 import io.ktor.client.features.json.*
 import io.ktor.client.features.logging.*
-import io.ktor.http.*
+import java.net.Proxy
 import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
 
-fun ktorClient(enableLog: Boolean = true) = HttpClient(CIO) {
+fun ktorClient(enableLog: Boolean = true,proxyConfig: Proxy= Proxy.NO_PROXY) = HttpClient(CIO) {
 
     engine {
         threadsCount = 4
@@ -28,6 +26,7 @@ fun ktorClient(enableLog: Boolean = true) = HttpClient(CIO) {
             random = mySecureRandom
             addKeyStore(myKeyStore, myKeyStorePassword)
         }*/
+        proxy= proxyConfig
 
         //忽略https认证，可以使用https进行请求
         https {
@@ -67,7 +66,7 @@ fun ktorClient(enableLog: Boolean = true) = HttpClient(CIO) {
     if (enableLog) {
         install(Logging) {
             logger = Logger.DEFAULT
-            level = LogLevel.INFO
+            level = LogLevel.BODY
         }
     }
 }

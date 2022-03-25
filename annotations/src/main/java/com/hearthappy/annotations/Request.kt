@@ -10,5 +10,9 @@ annotation class Request(
 
 
 enum class RequestType {
-    GET, POST, FormUrlEncoded, PATCH, DELETE
+    GET, POST, PATCH, DELETE
+}
+
+fun main() {
+    println("${RequestType.GET}")
 }

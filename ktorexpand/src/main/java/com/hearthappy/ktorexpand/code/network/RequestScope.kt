@@ -32,7 +32,6 @@ fun <T> BaseAndroidViewModel.requestScope(
 }
 
 
-
 data class ResponseError(val errorCode: Int, val errorMsg: String)
 
 
@@ -41,4 +40,11 @@ sealed class RequestState {
     data class SUCCEED<T>(val responseBody: T) : RequestState()
     data class FAILED(val message: ResponseError) : RequestState()
     object DEFAULT : RequestState()
+}
+
+sealed class RequestState2<T>(data: T? = null, message: String? = null) {
+    class Success<T>(data: T) : RequestState2<T>(data)
+    class Error<T>(message: String, data: T? = null) : RequestState2<T>(data, message)
+    class Loading<T>(data: T? = null) : RequestState2<T>(data)
+    object Default
 }

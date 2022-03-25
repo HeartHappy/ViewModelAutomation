@@ -1,16 +1,17 @@
 package com.hearthappy.viewmodelautomation
 
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.hearthappy.annotations.AndroidViewModel
 import com.hearthappy.annotations.BindLiveData
 import com.hearthappy.annotations.BindStateFlow
+import com.hearthappy.compiler.MainViewModel
 import com.hearthappy.viewmodelautomation.model.request.*
 import com.hearthappy.viewmodelautomation.model.response.ResHome
 import com.hearthappy.viewmodelautomation.model.response.ResLogin
 import com.hearthappy.viewmodelautomation.model.response.ResLoginBean
 import com.hearthappy.viewmodelautomation.model.response.ResRegister
-import io.ktor.http.cio.*
 
 
 /**
@@ -27,13 +28,13 @@ import io.ktor.http.cio.*
 @BindStateFlow(methodName = "home", requestClass = ReHome::class, responseClass = ResHome::class)
 @BindStateFlow(methodName = "register", requestClass = ReRegister::class, responseClass = ResRegister::class)
 @BindLiveData(methodName = "login2", requestClass = ReLoginBean::class, responseClass = ResLoginBean::class)
-@BindLiveData(methodName = "delete", requestClass = ReDelete::class, responseClass = Response::class)
+@BindLiveData(methodName = "delete", requestClass = ReDelete::class, responseClass = String::class)
+@BindLiveData(methodName = "userInfo", requestClass = ReUserInfo::class, responseClass = String::class)
 class MainActivity : AppCompatActivity() {
-    //    private val viewModel by viewModels<MainViewModel>()
+    private val viewModel by viewModels<MainViewModel>()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         //        viewModel.loginLiveData.observe(this) {
         //            when (it) {
         //                is Result.Success -> {

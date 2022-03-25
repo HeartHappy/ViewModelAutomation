@@ -16,6 +16,8 @@ fun main() = runBlocking {
 suspend inline fun <reified T> login() = ktorClient().use {
     it.get<T>("https://ktor.io/") {
         header(HttpHeaders.ContentType, ContentType.Application.Json)
-        parameter("price","asc")
+        parameter("price", "asc")
     }
 }
+
+
