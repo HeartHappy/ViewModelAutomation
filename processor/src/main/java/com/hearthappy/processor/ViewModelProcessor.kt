@@ -74,10 +74,8 @@ import kotlin.reflect.KClass
     private fun processAnnotations(
         roundEnv: RoundEnvironment?,
     ): Boolean {
-
         return roundEnv?.run {
-            val androidViewModelElements = this.getElementsAnnotatedWith(AndroidViewModel::class.java) //            return handlerAndroidViewModelAnt(androidViewModelElements, this)
-
+            val androidViewModelElements = getElementsAnnotatedWith(AndroidViewModel::class.java) //            return handlerAndroidViewModelAnt(androidViewModelElements, this)
             val requestDataList = createRequestDataList(this)
             handlerAndroidViewModel(androidViewModelElements, requestDataList)
         } ?: run {
@@ -123,7 +121,7 @@ import kotlin.reflect.KClass
             val requestState = ClassName(KTOR_NETWORK_PKG, KTOR_REQUEST_STATE)
             forEach {
                 val viewModelParam = it.getViewModelParam()
-                sendNoteMsg("==================> Create a private StateFlow") //                classBuilder.addProperty(PropertySpec.builder(viewModelParam.priPropertyName,mutableStateFlow.parameterizedBy(requestState)).delegate("lazy{}").build())
+                sendNoteMsg("==================> Create a private StateFlow")
                 generatePrivateProperty(propertyName = viewModelParam.priPropertyName, propertyType = mutableStateFlow.parameterizedBy(requestState), delegateValue = "$MUTABLE_STATE_FLOW($KTOR_REQUEST_STATE.DEFAULT)", addToClass = classBuilder, KModifier.PRIVATE)
 
                 sendNoteMsg("==================> Create a public StateFlow") //创建公开属性
@@ -157,7 +155,7 @@ import kotlin.reflect.KClass
     }
 
     private fun generateFunctionByLiveData(it: BindLiveData, requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData, classBuilder: TypeSpec.Builder) {
-        val function = FunSpec.builder(it.methodName).apply { //                    generateIO(roundEnv, requestClass, responseBody)
+        val function = FunSpec.builder(it.methodName).apply {
             generateMethodParametersSpec(requestDataList, viewModelParam)
             generateMethodRequestScope(requestDataList, viewModelParam)
             addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Error(it))},")
@@ -187,56 +185,7 @@ import kotlin.reflect.KClass
             addStatement("requestScope(io = {")
 
             findRequestData?.apply { // TODO:根据请求类型，发送header、params、appends
-                generateRequestApi(requestType, requestBodyData.bodyType, url, viewModelParam.responseBody, headers, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters)/*when (requestType) {
-                    RequestType.GET -> {
-                        addStatement("getRequest<${viewModelParam.responseBody}>(url=\"$url\", httpRequestScope = {")
-                        headers.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
-                        requestParameters.forEach { parameter -> addStatement("parameter(\"${parameter}\", ${parameter})") }
-                    }
-                    RequestType.POST -> { //两集合找差集
-                        when (requestBodyData.bodyType) {
-                            BodyType.JSON -> {
-                                sendRequest(requestType, requestBodyData.bodyType, url, viewModelParam.responseBody,headers,requestParameters)
-                                addStatement("postRequest<${viewModelParam.responseBody}>(url = \"$url\",") //添加请求头代码
-                                requestBodyData.jsonParameterName?.also { addStatement("requestBody=$it,") }
-                                addStatement("httpRequestScope={")
-                                headers.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
-                            }
-                            BodyType.X_WWW_FormUrlEncoded -> {
-                                addStatement("postFormUrlEncoded<${viewModelParam.responseBody}>(url = \"$url\",appends = {")
-                                requestBodyData.xwfParameters?.apply { this.second.forEach { (fieldName, fieldValue) -> addStatement("append(\"${fieldName}\", ${this.first}.${fieldValue})") } }
-                                addStatement("},httpRequestScope={")
-                                headers.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
-                            }
-                            else -> sendErrorMsg("requestType:${requestType},bodyType:${requestBodyData.bodyType} An error occurred")
-                        }
-                    }
-                    RequestType.PATCH -> {
-                        when (requestBodyData.bodyType) {
-                            BodyType.JSON -> {
-                                addStatement("patchRequest<${viewModelParam.responseBody}>(url=\"$url\",")
-                                requestBodyData.jsonParameterName?.also { addStatement("requestBody=$it,") }
-                                addStatement("httpRequestScope={")
-                                headers.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
-                            }
-                            BodyType.X_WWW_FormUrlEncoded -> {
-                                addStatement("patchFormUrlEncoded<${viewModelParam.responseBody}>(url = \"$url\",appends = {")
-                                requestBodyData.xwfParameters?.apply { this.second.forEach { (fieldName, fieldValue) -> addStatement("append(\"${fieldName}\", ${this.first}.${fieldValue})") } }
-                                addStatement("},httpRequestScope={")
-                                headers.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
-                            }
-                            else -> sendErrorMsg("requestType:${requestType},bodyType:${requestBodyData.bodyType} An error occurred")
-                        }
-
-                    }
-                    RequestType.DELETE -> {
-                        addStatement("deleteRequest<${viewModelParam.responseBody}>(url=\"$url\", httpRequestScope = {")
-                        headers.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
-                        requestParameters.forEach { parameter -> addStatement("parameter(\"${parameter}\", ${parameter})") }
-                    }
-                }
-
-                addStatement("})")*/
+                generateRequestApi(requestType, requestBodyData.bodyType, url, viewModelParam.responseBody, headers, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters)
             }
             addStatement("},")
         }
@@ -255,9 +204,11 @@ import kotlin.reflect.KClass
      * @param requestBody Any?
      * @param appends Pair<String, Map<String, String>>?
      */
-    private inline fun <reified T> FunSpec.Builder.generateRequestApi(requestType: RequestType, bodyType: BodyType, url: String, response: T, headers: List<HeaderData>? = null, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null) {
+    private fun FunSpec.Builder.generateRequestApi(requestType: RequestType, bodyType: BodyType, url: String, response: ClassName, headers: List<HeaderData>? = null, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null) {
+
+        // TODO:优化所需导入的响应类，根据响应类型的包名进行遍历导包
         addStatement("sendKtorRequest<$response>(requestType=${requestType},bodyType=${bodyType},url=\"$url\"")
-        if(headers?.isNotEmpty() == true){
+        if (headers?.isNotEmpty() == true) {
             headers.apply {
                 addStatement(",headers={")
                 forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
@@ -265,7 +216,7 @@ import kotlin.reflect.KClass
             }
         }
 
-        if(parameters?.isNotEmpty() == true && !parameters.contains(appends?.first)){
+        if (parameters?.isNotEmpty() == true && !parameters.contains(appends?.first)) {
             parameters.apply {
                 addStatement(",parameters={")
                 forEach { parameter -> addStatement("parameter(\"${parameter}\", ${parameter})") }
@@ -277,10 +228,10 @@ import kotlin.reflect.KClass
             addStatement(",requestBody=$requestBody")
         }
 
-        if(appends?.second?.isNotEmpty() == true){
+        if (appends?.second?.isNotEmpty() == true) {
             appends.apply {
                 addStatement(",appends={")
-                second.forEach { (fieldName, fieldValue) -> addStatement("append(\"${fieldName}\", ${this.first}.${fieldValue})") }
+                second.forEach { (queryName, queryValue) -> addStatement("append(\"${queryName}\", ${this.first}.${queryValue})") }
                 addStatement("}")
             }
         }
@@ -324,9 +275,7 @@ import kotlin.reflect.KClass
     private fun FunSpec.Builder.generateMethodParametersSpec(requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData) { //没有@Request注解时，由开发者自定义请求
         if (requestDataList.isEmpty()) {
             addParameter("io", LambdaTypeName.get(returnType = viewModelParam.responseBody).copy(suspending = true))
-        } else {
-
-            //有@Request注解时，自动生成响应请求
+        } else { //有@Request注解时，自动生成响应请求
             requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }?.methodParameters?.forEach {
                 addParameter(it.parameterName, it.parameterType.asKotlinClassName())
             }
@@ -348,8 +297,7 @@ import kotlin.reflect.KClass
 
             //                .addAliasedImport(requestScopeX, "RequestScope") //导包取别名
             //                .addTypeAlias(typeAlias).build() //文件内添加类型别名
-            .addImport(KTOR_NETWORK_PKG, KTOR_REQUEST_SCOPE, KTOR_REQUEST, KTOR_REQUEST_GET, KTOR_REQUEST_POST, KTOR_REQUEST_FORM_SUBMIT, KTOR_REQUEST_PATCH, KTOR_REQUEST_DELETE, KTOR_REQUEST_POST_XWF, KTOR_REQUEST_PATCH_XWF, GET, POST, PATCH, DELETE, NONE, TEXT, HTML, XML, JSON, FORM_DATA, X_WWW_FormUrlEncoded)
-            .addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER, KTOR_HEADER).addType(classBuilder.build()).build()
+            .addImport(KTOR_NETWORK_PKG, KTOR_REQUEST_SCOPE, KTOR_REQUEST, KTOR_REQUEST_GET, KTOR_REQUEST_POST, KTOR_REQUEST_FORM_SUBMIT, KTOR_REQUEST_PATCH, KTOR_REQUEST_DELETE, KTOR_REQUEST_POST_XWF, KTOR_REQUEST_PATCH_XWF, GET, POST, PATCH, DELETE, NONE, TEXT, HTML, XML, JSON, FORM_DATA, X_WWW_FormUrlEncoded).addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER, KTOR_HEADER).addType(classBuilder.build()).build()
 
 
         file.writeTo(File(generatedSource))
@@ -365,7 +313,7 @@ import kotlin.reflect.KClass
         val params = mutableListOf<String>()
         for (ele in requestElement.enclosedElements) { //获取参数类型和参数数量
             val paramName = ele.simpleName.toString()
-            if (paramName == "<init>" || paramName.contains("get") || paramName.first().isUpperCase() /*|| paramName==findHeaderAnt?.simpleName.toString()*/) continue
+            if (paramName == "<init>" || paramName.contains("get") || paramName.first().isUpperCase()) continue
 
             if (ele.simpleName.toString() == "copy") {
                 val substringMiddle = ele.toString().substringMiddle("(", ")", 1, 1)
@@ -487,7 +435,7 @@ import kotlin.reflect.KClass
         val baseUrlElements = roundEnv.getElementsAnnotatedWith(BaseUrl::class.java)
         val headersElements = roundEnv.getElementsAnnotatedWith(Header::class.java)
         val bodyElements = roundEnv.getElementsAnnotatedWith(Body::class.java).filterNot { it.enclosingElement.toString().contains("copy") }.toMutableSet()
-        val fieldElements = roundEnv.getElementsAnnotatedWith(Field::class.java).filterNot { it.enclosingElement.toString().contains("copy") }.toMutableSet()
+        val queryElements = roundEnv.getElementsAnnotatedWith(Query::class.java).filterNot { it.enclosingElement.toString().contains("copy") }.toMutableSet()
 
         //        outElementsAllLog(TAG_REQUEST, requestElements)
         //        outElementsAllLog(TAG_BASE_URL, baseUrlElements)
@@ -510,10 +458,9 @@ import kotlin.reflect.KClass
             val requestUrl = getRequestUrl(requestAnt, baseUrlData)
 
             //获取body相关参数
-            val requestBodyData = getRequestBodyData(bodyElements, fieldElements, requestElement, requestAnt)
-
-            //获取方法参数
-            val methodParameters = getMethodParameters(requestElement, bodyElements, requestType, requestBodyData)
+            val requestBodyData = getRequestBodyData(bodyElements, queryElements, requestElement)
+            sendNoteMsg("getRequestBodyData:${requestElement.simpleName},$requestBodyData") //获取方法参数
+            val methodParameters = getMethodParameters(requestElement, bodyElements, requestBodyData)
 
             //获取get请求参数
             val requestParameters: List<String> = getRequestParameters(methodParameters, requestAnt, headers, requestBodyData)
@@ -528,38 +475,32 @@ import kotlin.reflect.KClass
     /**
      * 获取请求Body的相关信息：参数名、以及Body数据类型，以及相关数据类型的参数结构
      * @param bodyElements MutableSet<out Element>
+     * @param queryElements MutableSet<out Element>
      * @param requestElement Element
-     * @param requestAnt Request
      * @return RequestBodyData
      */
-    private fun getRequestBodyData(bodyElements: MutableSet<out Element>, fieldElements: MutableSet<out Element>, requestElement: Element, requestAnt: Request): RequestBodyData {
-        return when (requestAnt.type) {
-            RequestType.POST, RequestType.PATCH -> { //获取当前请求的@Body元素
-                val currentBodyElement = getCurrentBodyElement(bodyElements, requestElement)
-                currentBodyElement?.run { //获取@Body类型
-                    val bodyType = getCurrentBodyType(this)
-                    createRequestBodyData(bodyType, currentBodyElement, fieldElements)
-                } ?: RequestBodyData(BodyType.NONE)
-            }
-            else -> RequestBodyData(BodyType.NONE)
-        }
+    private fun getRequestBodyData(bodyElements: MutableSet<out Element>, queryElements: MutableSet<out Element>, requestElement: Element): RequestBodyData { //获取当前请求的@Body元素
+        return getCurrentBodyElement(bodyElements, requestElement)?.run { //获取@Body类型
+            val bodyType = getCurrentBodyType(this)
+            createRequestBodyData(bodyType, this, queryElements)
+        } ?: RequestBodyData(BodyType.NONE)
     }
 
     /**
-     * 获取当前Body对应的类中@Field值
+     * 获取当前Body对应的类中@Query值
      * @param currentBodyElement Element
      * @param fieldElements MutableSet<out Element>
      * @return List<String>
      */
-    private fun getCurrentBodyFields(currentBodyElement: Element, fieldElements: MutableSet<out Element>): Map<String, String> {
-        val fieldMap = mutableMapOf<String, String>()
-        fieldElements.forEach { field -> //遍历当前Body相同类名的Field的属性值
-            if (currentBodyElement.asType().toString().contains(field.enclosingElement.toString().removeWith("(", ")"))) {
-                val fieldAnt = field.getAnnotation(Field::class.java)
-                fieldMap[fieldAnt.value] = field.simpleName.toString()
+    private fun getCurrentBodyQueryMap(currentBodyElement: Element, fieldElements: MutableSet<out Element>): Map<String, String> {
+        val queryMap = mutableMapOf<String, String>()
+        fieldElements.forEach { query -> //遍历当前Body相同类名的Query的属性值
+            if (currentBodyElement.asType().toString().contains(query.enclosingElement.toString().removeWith("(", ")"))) {
+                val queryAnt = query.getAnnotation(Query::class.java)
+                queryMap[queryAnt.value] = query.simpleName.toString()
             }
         }
-        return fieldMap
+        return queryMap
     }
 
 
@@ -569,12 +510,12 @@ import kotlin.reflect.KClass
      * @param currentBodyElement Element?
      * @return RequestBodyData
      */
-    private fun createRequestBodyData(bodyType: BodyType, currentBodyElement: Element, fieldElements: MutableSet<out Element>): RequestBodyData {
+    private fun createRequestBodyData(bodyType: BodyType, currentBodyElement: Element, queryElements: MutableSet<out Element>): RequestBodyData {
         val currentBodyParameterName = getCurrentBodyParameterName(currentBodyElement)
-        return if (bodyType == BodyType.X_WWW_FormUrlEncoded) { //创建XWF数据类型所需的参数@Field列表
-            val currentBodyFieldsMap = getCurrentBodyFields(currentBodyElement, fieldElements)
-            if (currentBodyFieldsMap.isEmpty()) sendErrorMsg("The request class is ${currentBodyElement.asType()}, the specified BodyType is X_WWW_FormUrlEncoded, but the Field annotation is not declared, resulting in an error")
-            RequestBodyData(bodyType, xwfParameters = currentBodyParameterName?.run { Pair(this, currentBodyFieldsMap) })
+        return if (bodyType == BodyType.X_WWW_FormUrlEncoded) { //创建XWF数据类型所需的参数@Query列表
+            val currentBodyQueryMap = getCurrentBodyQueryMap(currentBodyElement, queryElements)
+            if (currentBodyQueryMap.isEmpty()) sendErrorMsg("The request class is ${currentBodyElement.asType()}, the specified BodyType is X_WWW_FormUrlEncoded, but the Query annotation is not declared, resulting in an error")
+            RequestBodyData(bodyType, xwfParameters = currentBodyParameterName?.run { Pair(this, currentBodyQueryMap) })
         } else { //创建Json数据类型的参数
             RequestBodyData(bodyType, jsonParameterName = currentBodyParameterName)
         }
@@ -591,7 +532,7 @@ import kotlin.reflect.KClass
         return bodyElements.find {
             if (it.kind == ElementKind.CLASS) it.simpleName == requestElement.simpleName else it.enclosingElement.toString().removeWith("(", ")") == requestElement.simpleName.toString()
         } ?: run {
-            sendBodyNotFoundErrorMsg(requestElement)
+//            sendBodyNotFoundErrorMsg(requestElement)
             null
         }
     }
@@ -643,7 +584,6 @@ import kotlin.reflect.KClass
         //过滤rest参数
         val filterRestParameters = filterHeaderParameters.filterRestParameters(requestAnt.urlString)
 
-
         //过滤body或x_www_formUrlEncoded参数
         return filterRestParameters.filter { it != requestBodyData?.jsonParameterName }
     }
@@ -659,14 +599,28 @@ import kotlin.reflect.KClass
         return baseUrlData?.run { "\${${packagePath.asBaseUrlClassName(propertyName)}}".plus(url) } ?: url
     }
 
+
+    // TODO: 存在问题 ，不支持get->xwf
     /**
      * 获取方法参数列表，根据Class和Parameter注解
      * @param requestElement Element
      * @return List<ParameterData>
      */
-    private fun getMethodParameters(requestElement: Element, bodyElements: MutableSet<out Element>, requestType: RequestType, requestBodyData: RequestBodyData?): List<ParameterData> {
+    private fun getMethodParameters(requestElement: Element, bodyElements: MutableSet<out Element>, requestBodyData: RequestBodyData?): List<ParameterData> {
         val parameters = mutableListOf<ParameterData>()
-        when (requestType) {
+        when (requestBodyData?.bodyType) {
+            BodyType.NONE -> {
+                parameters.addAll(getAllParameterByRequestClass(requestElement))
+            }
+            BodyType.TEXT -> {}
+            BodyType.JSON, BodyType.X_WWW_FormUrlEncoded -> {
+                parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
+            }
+            BodyType.HTML -> {}
+            BodyType.XML -> {}
+            BodyType.FORM_DATA -> {}
+            else -> {}
+        }/*when (requestType) {
             RequestType.GET, RequestType.DELETE -> parameters.addAll(getAllParameterByRequestClass(requestElement))
             RequestType.PATCH, RequestType.POST -> {
                 requestBodyData?.bodyType?.let { bodyType ->
@@ -679,7 +633,7 @@ import kotlin.reflect.KClass
                     }
                 }
             }
-        }
+        }*/
         return parameters
     }
 
@@ -792,7 +746,7 @@ import kotlin.reflect.KClass
             TAG_REQUEST -> Request::class.java
             TAG_HEADER -> Header::class.java
             TAG_BODY -> Body::class.java
-            TAG_FIELD -> Field::class.java
+            TAG_QUERY -> Query::class.java
             TAG_BASE_URL -> BaseUrl::class.java
             else -> Request::class.java
         }
@@ -813,7 +767,7 @@ import kotlin.reflect.KClass
         const val TAG_REQUEST = "@Request"
         const val TAG_HEADER = "@Header"
         const val TAG_BODY = "@Body"
-        const val TAG_FIELD = "@Field"
+        const val TAG_QUERY = "@Query"
         const val TAG_BASE_URL = "@BaseUrl"
         const val KAPT_KOTLIN_GENERATED = "kapt.kotlin.generated"
         const val APPLICATION_PKG = "android.app"
