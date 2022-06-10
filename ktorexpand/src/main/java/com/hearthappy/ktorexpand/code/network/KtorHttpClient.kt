@@ -12,7 +12,7 @@ import javax.net.ssl.X509TrustManager
 
 
 fun ktorClient(enableLog: Boolean = true,proxyConfig: Proxy= Proxy.NO_PROXY) = HttpClient(CIO) {
-
+    expectSuccess = false //false：禁用，验证ResponseCode处理的异常，只有200为成功，其他的都会作为异常处理
     engine {
         threadsCount = 4
         pipelining = true
@@ -27,7 +27,6 @@ fun ktorClient(enableLog: Boolean = true,proxyConfig: Proxy= Proxy.NO_PROXY) = H
             addKeyStore(myKeyStore, myKeyStorePassword)
         }*/
         proxy= proxyConfig
-
         //忽略https认证，可以使用https进行请求
         https {
             trustManager = @SuppressLint("CustomX509TrustManager")
@@ -44,6 +43,8 @@ fun ktorClient(enableLog: Boolean = true,proxyConfig: Proxy= Proxy.NO_PROXY) = H
             }
         }
     }
+
+
 
 
 

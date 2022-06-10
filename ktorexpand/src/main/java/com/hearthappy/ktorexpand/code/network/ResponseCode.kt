@@ -27,18 +27,18 @@ const val OTHER = 1
 const val NETWORK_ERROR = 100
 
 internal fun exceptionToError(e: Throwable) = if (e is HttpException) {             //HTTP 错误
-    httpCode(e.response.status, e)
+    httpCode(e.response.status,e)
 } else if (e is JsonParseException || e is JSONException || e is ParseException) {
-    ResponseError(OTHER, "解析错误") //均视为解析错误
+    FailedBody(OTHER, "解析错误") //均视为解析错误
 } else if (e is ConnectException || e is SocketTimeoutException) {
-    ResponseError(OTHER, "连接超时，请检查服务器地址或稍后重试！") //均视为网络错误，原因：1、本地网络问题  2、服务器问题 3、路由地址不对
+    FailedBody(OTHER, "连接超时，请检查网络或稍后重试！") //均视为网络错误，原因：1、本地网络问题  2、服务器问题 3、路由地址不对
 } else if (e is SSLHandshakeException) {
-    ResponseError(OTHER, "系统不信任其安全证书。出现此问题的原因可能是配置有误或您的连接被拦截了")
+    FailedBody(OTHER, "系统不信任其安全证书。出现此问题的原因可能是配置有误或您的连接被拦截了")
 } else {
-    ResponseError(UNKNOWN, e.toString()) //未知错误
+    FailedBody(UNKNOWN, e.toString()) //未知错误
 }
 
-internal fun httpCode(code: Int, e: HttpException): ResponseError {
+internal fun httpCode(code: Int, e: HttpException): FailedBody {
     val errorMsg = when (code) {
         BAD_REQUEST -> "提交的字段类型和后台接收字段类型不匹配"
         UNAUTHORIZED -> "当前请求需要用户验证"
@@ -51,7 +51,8 @@ internal fun httpCode(code: Int, e: HttpException): ResponseError {
         SERVICE_UNAVAILABLE -> "由于临时的服务器维护或者过载，服务器当前无法处理请求"
         else -> e.message.toString() //其它均视为网络错误
     }
-    return ResponseError(code, errorMsg)
+    return FailedBody(code, errorMsg)
 }
+
 
 

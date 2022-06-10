@@ -7,6 +7,7 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
 import io.ktor.http.cio.*
+import io.ktor.util.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -28,102 +29,6 @@ fun main() {
     }
 }
 
-fun contentTypeFromJson(httpRequestBuilder: HttpRequestBuilder) {
-    httpRequestBuilder.header(HttpHeaders.ContentType, ContentType.Application.Json)
-    httpRequestBuilder.header(HttpHeaders.Accept, "*/*")
-    httpRequestBuilder.header(HttpHeaders.AcceptEncoding, listOf(ContentType.Application.GZip.contentType))
-}
-
-
-/**
- *
- * @param url String
- * @param httpRequestScope use parameter(key,value). header(key,value)
- * @return Response
- */
-suspend inline fun <reified Response> getRequest(url: String, httpRequestScope: HttpRequestBuilder.() -> Unit) = ktorClient().use {
-    it.get<Response>(url) {
-        contentTypeFromJson(this)
-        httpRequestScope()
-    }
-}
-
-
-/**
- *
- * @param url String
- * @param requestBody use Any
- * @param httpRequestScope use header(key,value)
- * @return Response
- */
-suspend inline fun <reified Response> postRequest(url: String, requestBody: Any, httpRequestScope: HttpRequestBuilder.() -> Unit) = ktorClient().use {
-    it.post<Response>(url) {
-        contentTypeFromJson(this)
-        httpRequestScope()
-        body = requestBody
-    }
-}
-
-
-/**
- *
- * @param url String
- * @param appends use append(key,value)
- * @param httpRequestScope use header(key,value)
- * @return Response
- */
-suspend inline fun <reified Response> formSubmit(url: String, appends: ParametersBuilder.() -> Unit, httpRequestScope: HttpRequestBuilder.() -> Unit) = ktorClient().use {
-    it.submitForm<Response>(url = url, formParameters = Parameters.build(appends)) {
-        contentTypeFromJson(this)
-        httpRequestScope()
-    }
-}
-
-suspend inline fun <reified Response> patchRequest(url: String, requestBody: Any = EmptyContent, httpRequestScope: HttpRequestBuilder.() -> Unit) = ktorClient().use {
-    it.patch<Response>(urlString = url) {
-        contentTypeFromJson(this)
-        httpRequestScope()
-        if (requestBody != EmptyContent) {
-            body = requestBody
-        }
-    }
-}
-
-suspend inline fun <reified Response> deleteRequest(url: String, httpRequestScope: HttpRequestBuilder.() -> Unit) = ktorClient().use {
-    it.delete<Response>(urlString = url) {
-        contentTypeFromJson(this)
-        httpRequestScope()
-    }
-}
-
-suspend inline fun <reified Response> getFormUrlEncoded(url: String, appends: ParametersBuilder.() -> Unit, httpRequestScope: HttpRequestBuilder.() -> Unit) = ktorClient().use {
-    it.get<Response>(urlString = url) {
-        httpRequestScope()
-        body = FormDataContent(Parameters.build {
-            appends()
-        })
-    }
-}
-
-
-suspend inline fun <reified Response> postFormUrlEncoded(url: String, appends: ParametersBuilder.() -> Unit, httpRequestScope: HttpRequestBuilder.() -> Unit) = ktorClient().use {
-    it.post<Response>(urlString = url) {
-        httpRequestScope()
-        body = FormDataContent(Parameters.build {
-            appends()
-        })
-    }
-}
-
-
-suspend inline fun <reified Response> patchFormUrlEncoded(url: String, appends: ParametersBuilder.() -> Unit, httpRequestScope: HttpRequestBuilder.() -> Unit) = ktorClient().use {
-    it.patch<Response>(urlString = url) {
-        httpRequestScope()
-        body = FormDataContent(Parameters.build {
-            appends()
-        })
-    }
-}
 
 suspend inline fun <reified Response> HttpClient.getRequest(url: String, headers: HttpRequestBuilder.() -> Unit, httpRequestScope: HttpRequestBuilder.() -> Unit): Response = get(urlString = url) {
     headers()
@@ -157,6 +62,7 @@ suspend inline fun <reified Response> HttpClient.deleteRequest(url: String, head
  * @param appends @Body = X_WWW_FormUrlEncoded 时有数据
  * @return Any?
  */
+
 suspend inline fun <reified Response> sendKtorRequest(requestType: Int, bodyType: Int, url: String, headers: HttpRequestBuilder.() -> Unit = {}, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}) = ktorClient().use {
     when (requestType) {
         GET -> {

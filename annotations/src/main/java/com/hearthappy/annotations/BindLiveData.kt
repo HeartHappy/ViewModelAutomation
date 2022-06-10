@@ -9,7 +9,6 @@ import kotlin.reflect.KClass
  * ClassDescription :LiveData注解
  */
 
-
 @Repeatable
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)

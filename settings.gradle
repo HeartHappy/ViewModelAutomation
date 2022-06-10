@@ -12,6 +12,7 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
+
 rootProject.name = "ViewModelAutomation"
 include ':app'
 include ':processor'
