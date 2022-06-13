@@ -1,18 +1,12 @@
 package com.hearthappy.ktorexpand.code.network
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.google.gson.JsonParseException
 import io.ktor.client.statement.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.lang.RuntimeException
 
 /**
  * A generic class that holds a value with its loading status.
- * @param <T>
+ * @param <T> LiveData
  */
 sealed class Result<out T: Any> {
 
@@ -30,23 +24,26 @@ sealed class Result<out T: Any> {
 }
 
 
-inline fun <reified R> ViewModel.requestHandler(crossinline io: suspend () -> HttpResponse, crossinline onSucceed: (R) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit) {
-    viewModelScope.launch {
-        val result = runCatching {
-            io()
-        }
+suspend inline fun <reified R> resultHandler(result: kotlin.Result<HttpResponse>, crossinline onSucceed: (R) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit) {
+    result.apply {
         result.exceptionOrNull()?.let(onThrowable) ?: let {
-            result.getOrNull()?.let { response ->
-                if (result.isSuccess && response.status.value == 200) {
+            getOrNull()?.let { response ->
+                if (this.isSuccess && response.status.value == 200) {
                     val readText = response.readText()
                     println("HttpClient---> Result onSucceed:${response.status.value},$readText")
-                    if (isJson(readText) && !R::class.java.name.contains("String")) {
-                        println("HttpClient---> Result isJson:${R::class.java},${R::class.java.name}")
-                        val fromJson = Gson().fromJson(readText, R::class.java)
-                        onSucceed(fromJson)
-                    } else {
-                        println("HttpClient---> Json parsing error, please modify the response result: ${R::class.java}")
-                        onThrowable(JsonParseException("Json parsing error, please modify the response result: ${R::class.java}"))
+                    when {
+                        isJson(readText) && R::class.java.name != String::class.java.name -> {
+                            println("HttpClient---> Result isJson:${R::class.java},${R::class.java.name}")
+                            val fromJson = Gson().fromJson(readText, R::class.java)
+                            onSucceed(fromJson)
+                        }
+                        !isJson(readText) && R::class.java.name == String::class.java.name -> {
+                            onSucceed(readText as R)
+                        }
+                        else -> {
+                            println("HttpClient---> Parsing error, response text: $readText, does not match response type: ${R::class.java}")
+                            onThrowable(JsonParseException("Parsing error, response text: $readText, does not match response type: ${R::class.java}"))
+                        }
                     }
                 } else {
                     val failedBody = FailedBody(response.status.value, response.readText())
@@ -76,4 +73,5 @@ fun isJson(content: String): Boolean {
         true
     } else isJson
 }
+
 

@@ -1,12 +1,16 @@
 package com.hearthappy.ktorexpand.code.network
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
 import io.ktor.client.statement.*
-
+import kotlinx.coroutines.launch
 
 
 inline fun <reified R> ViewModel.requestScope(crossinline io: suspend () -> HttpResponse, crossinline onSucceed: (R) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit = { println("HttpClient---> Result throwable:$it") }) {
-    requestHandler(io, onSucceed, onFailure, onThrowable)
+    viewModelScope.launch {
+        runCatching { io() }.apply { resultHandler(this, onSucceed, onFailure, onThrowable) }
+    }
 }
 
 /*fun <T> BaseAndroidViewModel.requestScope(
@@ -33,6 +37,8 @@ inline fun <reified R> ViewModel.requestScope(crossinline io: suspend () -> Http
 
 data class FailedBody(val statusCode: Int, val text: String?)
 
+data class ErrorMessage(val error: String)
+
 
 sealed class RequestState {
     object LOADING: RequestState()
@@ -40,4 +46,26 @@ sealed class RequestState {
     data class FAILED(val failedBody: FailedBody): RequestState()
     data class Throwable(val throwable: kotlin.Throwable): RequestState()
     object DEFAULT: RequestState()
+}
+
+inline fun <reified T> RequestState.asSucceedBody(): T? {
+    return when (this) {
+        is RequestState.SUCCEED<*> -> {
+            this.responseBody as T
+        }
+        else -> {
+            null
+        }
+    }
+}
+
+fun RequestState.asFailedMessage(): ErrorMessage? {
+    return when (this) {
+        is RequestState.FAILED -> {
+            Gson().fromJson(this.failedBody.text, ErrorMessage::class.java)
+        }
+        else -> {
+            null
+        }
+    }
 }

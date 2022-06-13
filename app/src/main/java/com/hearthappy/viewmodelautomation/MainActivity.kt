@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.collect
 @BindLiveData(methodName = "login2", requestClass = ReLoginBean::class, responseClass = ResLoginBean::class)
 @BindLiveData(methodName = "delete", requestClass = ReDelete::class, responseClass = String::class)
 @BindLiveData(methodName = "userInfo", requestClass = ReUserInfo::class, responseClass = String::class)
+@BindStateFlow("getAppOption", ReAppOption::class, String::class)
 class MainActivity: AppCompatActivity() {
     private val viewModel by viewModels<MainViewModel>()
 
@@ -58,19 +59,39 @@ class MainActivity: AppCompatActivity() {
             viewModel.loginStateFlow.collect {
                 when (it) {
                     is RequestState.SUCCEED<*> -> {
-                        Log.d(TAG, "onCreate: ${it.responseBody}")
+                        Log.d(TAG, "onCreate SUCCEED: ${it.responseBody}")
                     }
                     is RequestState.FAILED -> {
-                        Log.d(TAG, "onCreate: ${it.failedBody}")
+                        Log.d(TAG, "onCreate FAILED: ${it.failedBody}")
                     }
                     is RequestState.Throwable -> {
-                        Log.d(TAG, "onCreate: ${it.throwable}")
+                        Log.d(TAG, "onCreate Throwable: ${it.throwable}")
                     }
                     else -> {
                     }
                 }
             }
         }
+
+        lifecycleScope.launchWhenCreated {
+            viewModel.getAppOptionStateFlow.collect {
+                when (it) {
+                    is RequestState.SUCCEED<*>-> {
+                        val s = it.responseBody as String
+                        Log.d(TAG, "onCreate: $s")
+                    }
+                    is RequestState.FAILED->{
+                        Log.d(TAG, "onCreate: ${it.failedBody.text}")
+                    }
+                    is RequestState.Throwable->{
+                        Log.d(TAG, "onCreate: ${it.throwable.message}")
+                    }
+                    else -> {
+                    }
+                }
+            }
+        }
+
 
 
     }
@@ -80,6 +101,13 @@ class MainActivity: AppCompatActivity() {
     }
 
     fun btnRequest(view: View) {
+        Log.d(TAG, "btnRequest: ")
         viewModel.login(ReLogin("user_3", "24cff18577e8dc8c6fdf53a6621a0b4d"))
+    }
+
+    fun btnRequest2(view: View) {
+        Log.d(TAG, "btnRequest2: ")
+        val token="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ2ZXN5c3RlbSIsInN1YiI6ImF1dGhfdG9rZW4iLCJhdWQiOiJodHRwczovL3d3dy52ZXN5c3RlbS5jb20vIiwiZXhwIjoxNjU1MTAxMjQzLCJuYmYiOjE2NTUwOTk0NDMsImlhdCI6MTY1NTA5NzY0MywianRpIjoiNjkxODM2ODIwMzA0NTEwMTU3MCIsImlkIjoiNjkxODM2ODIwMzA0NTEwMTU3MCIsInVzZXJuYW1lIjoidXNlcl8zIiwiYWNjZXNzIjp7InJvb3QiOmZhbHNlLCJ1c2VyIjpudWxsLCJ3b3JrX29yZGVyIjpudWxsLCJtZXNzYWdlIjpudWxsLCJhcHAiOm51bGwsInN0b3JhZ2UiOm51bGx9fQ.pvJKgwwZ0g3xGCyI7yCSz5Z_iudbBVb0DDGMsyuPbPGCmZa5z5EMqLTB6cKwUpe8yu3BWAE7Z6FSxoVAw4U1HDP4Ilo_5OJubwIDagWkhGdR65aKDE5UHJVH_js8dlkVk9r31IAFohToUFqCzm4gR7E4pyuW1z4B4QMFbtvkZzbb1ZinmRAG21zJfTg8MjjCVIRiftDAf7CkB0E5kkIXPLXYl8HzhbXG6k22AZCqrg0-lD-fbd85ORbifh5Twh6dEcfmJsIub027PISdG1glj534tXwFT15UchtuCs4lusM84F9SA_DyUHvC0aJ0FNB60w2bbi3lFjK_WdJ3-SD-Iw"
+        viewModel.getAppOption(token,ReAppOptionData("6927483212241215488","6926050667729281024"))
     }
 }
