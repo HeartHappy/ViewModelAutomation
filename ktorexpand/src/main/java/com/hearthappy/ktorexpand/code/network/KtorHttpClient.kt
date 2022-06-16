@@ -2,16 +2,18 @@ package com.hearthappy.ktorexpand.code.network
 
 import android.annotation.SuppressLint
 import io.ktor.client.*
+import io.ktor.client.engine.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.*
 import io.ktor.client.features.json.*
 import io.ktor.client.features.logging.*
+import java.net.InetSocketAddress
 import java.net.Proxy
 import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
 
-fun ktorClient(enableLog: Boolean = true,proxyConfig: Proxy= Proxy.NO_PROXY) = HttpClient(CIO) {
+fun ktorClient(enableLog: Boolean = true, proxyIp: String, proxyPort: Int) = HttpClient(CIO) {
     expectSuccess = false //false：禁用，验证ResponseCode处理的异常，只有200为成功，其他的都会作为异常处理
     engine {
         threadsCount = 4
@@ -26,11 +28,15 @@ fun ktorClient(enableLog: Boolean = true,proxyConfig: Proxy= Proxy.NO_PROXY) = H
             random = mySecureRandom
             addKeyStore(myKeyStore, myKeyStorePassword)
         }*/
-        proxy= proxyConfig
+        proxy = if (proxyIp != EmptyString && proxyPort != -1) {
+            ProxyConfig(Proxy.Type.HTTP, InetSocketAddress(proxyIp, proxyPort))
+        } else {
+            Proxy.NO_PROXY
+        }
+
         //忽略https认证，可以使用https进行请求
         https {
-            trustManager = @SuppressLint("CustomX509TrustManager")
-            object : X509TrustManager {
+            trustManager = @SuppressLint("CustomX509TrustManager") object: X509TrustManager {
                 @SuppressLint("TrustAllX509TrustManager")
                 override fun checkClientTrusted(p0: Array<out X509Certificate>?, p1: String?) {
                 }
@@ -58,11 +64,11 @@ fun ktorClient(enableLog: Boolean = true,proxyConfig: Proxy= Proxy.NO_PROXY) = H
         connectTimeoutMillis = timeout
     }
 
-   /* install(Auth){
-        bearer {
-            
-        }
-    }*/
+    /* install(Auth){
+         bearer {
+
+         }
+     }*/
 
     if (enableLog) {
         install(Logging) {

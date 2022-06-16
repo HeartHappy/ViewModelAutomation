@@ -13,7 +13,7 @@ fun main() = runBlocking {
     println("end...")
 }
 
-suspend inline fun <reified T> login() = ktorClient().use {
+suspend inline fun <reified T> login() = ktorClient(proxyIp = "", proxyPort = -1).use {
     it.get<T>("https://ktor.io/") {
         header(HttpHeaders.ContentType, ContentType.Application.Json)
         parameter("price", "asc")

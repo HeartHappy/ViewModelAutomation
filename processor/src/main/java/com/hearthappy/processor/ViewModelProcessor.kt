@@ -11,7 +11,6 @@ import com.hearthappy.processor.tools.removeWith
 import com.hearthappy.processor.tools.substringMiddle
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import com.squareup.kotlinpoet.javapoet.KClassName
 import java.io.File
 import java.util.*
 import javax.annotation.processing.AbstractProcessor
@@ -52,17 +51,17 @@ import kotlin.reflect.KClass
  * sendNoteMsg(element.simpleName.toString()) //获取类名
  * sendNoteMsg(element.asType().toString()) //获取类的全相对路径：com.hearthappy.viewmodelautomation.model.ReLogin
  */
-@AutoService(Processor::class) class ViewModelProcessor : AbstractProcessor() { //导包所需
+@AutoService(Processor::class) class ViewModelProcessor: AbstractProcessor() { //导包所需
 
     private val application = ClassName(APPLICATION_PKG, APPLICATION)
-    private val androidViewModel = ClassName(ANDROID_VIEWMODEL_PKG, ANDROID_VIEWMODEL)
+    private val androidViewModel = ClassName(ANDROID_VIEW_MODEL_PKG, ANDROID_VIEW_MODEL)
 
     override fun getSupportedSourceVersion(): SourceVersion {
         return SourceVersion.latestSupported()
     }
 
     override fun getSupportedAnnotationTypes(): MutableSet<String> {
-        return mutableSetOf(AndroidViewModel::class.java.name, BindLiveData::class.java.name, BindStateFlow::class.java.name, Request::class.java.name, BaseUrl::class.java.name, Body::class.java.name)
+        return mutableSetOf(AndroidViewModel::class.java.name, BindLiveData::class.java.name, BindStateFlow::class.java.name, Request::class.java.name, BaseConfig::class.java.name, Body::class.java.name)
     }
 
     override fun process(
@@ -190,15 +189,7 @@ import kotlin.reflect.KClass
             addStatement("requestScope<${viewModelParam.responseBody}>(io = {")
 
             findRequestData?.apply {
-                generateRequestApi(
-                    requestType,
-                    requestBodyData.bodyType,
-                    url,
-                    headers,
-                    requestParameters,
-                    requestBodyData.jsonParameterName,
-                    requestBodyData.xwfParameters
-                )
+                generateRequestApi(requestType, requestBodyData.bodyType, url, headers, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, baseConfigData)
             }
             addStatement("},")
         }
@@ -216,15 +207,7 @@ import kotlin.reflect.KClass
      * @param requestBody Any?
      * @param appends Pair<String, Map<String, String>>?
      */
-    private fun FunSpec.Builder.generateRequestApi(
-        requestType: RequestType,
-        bodyType: BodyType,
-        url: String,
-        headers: List<HeaderData>? = null,
-        parameters: List<String>? = null,
-        requestBody: Any? = null,
-        appends: Pair<String, Map<String, String>>? = null
-    ) {
+    private fun FunSpec.Builder.generateRequestApi(requestType: RequestType, bodyType: BodyType, url: String, headers: List<HeaderData>? = null, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, baseConfigData: BaseConfigData?) {
 
         addStatement("sendKtorRequest<HttpResponse>(requestType=${requestType},bodyType=${bodyType},url=\"$url\"")
         if (headers?.isNotEmpty() == true) {
@@ -254,6 +237,14 @@ import kotlin.reflect.KClass
                 addStatement("}")
             }
         }
+        baseConfigData?.let {
+            if (!it.enabledLog) {
+                addStatement(",enableLog=${it.enabledLog}")
+            } // TODO: 需要修改成动态代理 ，现在是静态代理
+            if (it.proxyIp.isNotEmpty() && it.proxyPort != -1) {
+                addStatement(",proxyIp=\"${it.proxyIp}\",proxyPort=${it.proxyPort}")
+            }
+        }
         addStatement(")")
     }
 
@@ -268,14 +259,14 @@ import kotlin.reflect.KClass
         var pubPropertyName = ""
         when (this) {
             is BindLiveData -> {
-                requestClass = this.getAnnotationValue { it.requestClass }.toString()
-                responseClass = this.getAnnotationValue { bld -> bld.responseClass }.toString()
-                pubPropertyName = this.liveDataName.ifEmpty { this.methodName.plus(LIVEDATA) }
+                requestClass = getAnnotationValue { it.requestClass }.toString()
+                responseClass = getAnnotationValue { bld -> bld.responseClass }.toString()
+                pubPropertyName = liveDataName.ifEmpty { methodName.plus(LIVEDATA) }
             }
             is BindStateFlow -> {
-                requestClass = this.getAnnotationValue { this.requestClass }.toString()
-                responseClass = this.getAnnotationValue { bld -> bld.responseClass }.toString()
-                pubPropertyName = this.stateFlowName.ifEmpty { this.methodName.plus(STATE_FLOW) }
+                requestClass = getAnnotationValue { it.requestClass }.toString()
+                responseClass = getAnnotationValue { bld -> bld.responseClass }.toString()
+                pubPropertyName = stateFlowName.ifEmpty { methodName.plus(STATE_FLOW) }
             }
         }
 
@@ -315,11 +306,8 @@ import kotlin.reflect.KClass
 
             //                .addAliasedImport(requestScopeX, "RequestScope") //导包取别名
             //                .addTypeAlias(typeAlias).build() //文件内添加类型别名
-            .addImport(KTOR_NETWORK_PKG, KTOR_REQUEST_SCOPE, KTOR_REQUEST, GET, POST, PATCH, DELETE, NONE, TEXT, HTML, XML, JSON, FORM_DATA, X_WWW_FormUrlEncoded)
-//            .addImport(KTOR_NETWORK_PKG,"*")
-            .addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER, KTOR_HEADER)
-            .addImport(KTOR_CLIENT_RESPONSE_PKG,HTTP_RESPONSE)
-//            .addImport(KTOR_CLIENT_RESPONSE_PKG)
+            .addImport(KTOR_NETWORK_PKG, KTOR_REQUEST_SCOPE, KTOR_REQUEST, GET, POST, PATCH, DELETE, NONE, TEXT, HTML, XML, JSON, FORM_DATA, X_WWW_FormUrlEncoded) //            .addImport(KTOR_NETWORK_PKG,"*")
+            .addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER, KTOR_HEADER).addImport(KTOR_CLIENT_RESPONSE_PKG, HTTP_RESPONSE) //            .addImport(KTOR_CLIENT_RESPONSE_PKG)
             .addType(classBuilder.build()).build()
 
 
@@ -455,13 +443,13 @@ import kotlin.reflect.KClass
      */
     private fun createRequestDataList(roundEnv: RoundEnvironment): List<RequestData> { //获取所有注解，将请求集中在一起
         val requestElements = roundEnv.getElementsAnnotatedWith(Request::class.java)
-        val baseUrlElements = roundEnv.getElementsAnnotatedWith(BaseUrl::class.java)
+        val baseConfigElements = roundEnv.getElementsAnnotatedWith(BaseConfig::class.java)
         val headersElements = roundEnv.getElementsAnnotatedWith(Header::class.java)
         val bodyElements = roundEnv.getElementsAnnotatedWith(Body::class.java).filterNot { it.enclosingElement.toString().contains("copy") }.toMutableSet()
         val queryElements = roundEnv.getElementsAnnotatedWith(Query::class.java).filterNot { it.enclosingElement.toString().contains("copy") }.toMutableSet()
 
         //        outElementsAllLog(TAG_REQUEST, requestElements)
-        //        outElementsAllLog(TAG_BASE_URL, baseUrlElements)
+        //        outElementsAllLog(TAG_BASE_CONFIG, baseConfigElements) 
         //        outElementsAllLog(TAG_HEADER, headersElements)
         //        outElementsAllLog(TAG_BODY, bodyElements)
         //        outElementsAllLog(TAG_QUERY, queryElements)
@@ -471,23 +459,25 @@ import kotlin.reflect.KClass
         val requestDataList = mutableListOf<RequestData>()
         requestElements.forEach { requestElement ->
             val requestAnt = requestElement.getAnnotation(Request::class.java)
-            val baseUrlData = baseUrlElements.filterBaseUrlByRequestClass(requestAnt, requestElement.simpleName.toString())
+            val baseConfigData = baseConfigElements.filterBaseUrlByRequestClass(requestAnt, requestElement.simpleName.toString())
             val headerElements = headersElements.filterHeaderAntByRequestClass(requestElement)
             val headers = headerElements.map {
                 HeaderData(it.getAnnotation(Header::class.java).value, it.simpleName.toString())
             }
             val requestClass = requestElement.simpleName.toString()
             val requestType = requestAnt.type
-            val requestUrl = getRequestUrl(requestAnt, baseUrlData)
+            val requestUrl = getRequestUrl(requestAnt, baseConfigData)
 
             //获取body相关参数
             val requestBodyData = getRequestBodyData(bodyElements, queryElements, requestElement)
-            sendNoteMsg("getRequestBodyData:${requestElement.simpleName},$requestBodyData") //获取方法参数
+            sendNoteMsg("getRequestBodyData:${requestElement.simpleName},$requestBodyData")
+
+            //获取方法参数
             val methodParameters = getMethodParameters(requestElement, bodyElements, requestBodyData)
 
             //获取get请求参数
             val requestParameters: List<String> = getRequestParameters(methodParameters, requestAnt, headers, requestBodyData)
-            val requestData = RequestData(requestClass, requestType, requestUrl, baseUrlData, headers, methodParameters, requestParameters, requestBodyData)
+            val requestData = RequestData(requestClass, requestType, requestUrl, baseConfigData, headers, methodParameters, requestParameters, requestBodyData)
             requestDataList.add(requestData)
             sendNoteMsg("【RequestData】:$requestData")
         }
@@ -613,12 +603,12 @@ import kotlin.reflect.KClass
     /**
      * 获取请求Url
      * @param requestAnt Request
-     * @param baseUrlData BaseUrlData?
+     * @param baseConfigData BaseConfigData?
      * @return String
      */
-    private fun getRequestUrl(requestAnt: Request, baseUrlData: BaseUrlData?): String {
+    private fun getRequestUrl(requestAnt: Request, baseConfigData: BaseConfigData?): String {
         val url = requestAnt.urlString.asRest("{", "}") //处理全局URL
-        return baseUrlData?.run { "\${${packagePath.asBaseUrlClassName(propertyName)}}".plus(url) } ?: url
+        return baseConfigData?.run { "\${${packagePath.asBaseUrlClassName(propertyName)}}".plus(url) } ?: url
     }
 
 
@@ -633,14 +623,19 @@ import kotlin.reflect.KClass
             BodyType.NONE -> {
                 parameters.addAll(getAllParameterByRequestClass(requestElement))
             }
-            BodyType.TEXT -> {}
+            BodyType.TEXT -> {
+            }
             BodyType.JSON, BodyType.X_WWW_FormUrlEncoded -> {
                 parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
             }
-            BodyType.HTML -> {}
-            BodyType.XML -> {}
-            BodyType.FORM_DATA -> {}
-            else -> {}
+            BodyType.HTML -> {
+            }
+            BodyType.XML -> {
+            }
+            BodyType.FORM_DATA -> {
+            }
+            else -> {
+            }
         }/*when (requestType) {
             RequestType.GET, RequestType.DELETE -> parameters.addAll(getAllParameterByRequestClass(requestElement))
             RequestType.PATCH, RequestType.POST -> {
@@ -699,16 +694,16 @@ import kotlin.reflect.KClass
      * @receiver MutableSet<out Element>
      * @param request Request
      */
-    private fun MutableSet<out Element>.filterBaseUrlByRequestClass(request: Request, requestClass: String): BaseUrlData? {
-        val baseUrlElements = this.filter { it.getAnnotation(BaseUrl::class.java).key == request.baseUrlKey }
-        return if (baseUrlElements.isNotEmpty()) {
-            val baseUrlAnt = baseUrlElements[0].getAnnotation(BaseUrl::class.java)
-            if (baseUrlElements.size > 1) {
-                sendErrorMsg("point to ${baseUrlElements[1].simpleName}. The @BaseUrl key must be unique, please specify the key for the parameter baseUrlKey in the @Request annotation")
+    private fun MutableSet<out Element>.filterBaseUrlByRequestClass(request: Request, requestClass: String): BaseConfigData? {
+        val baseConfigElements = this.filter { it.getAnnotation(BaseConfig::class.java).key == request.baseUrlKey }
+        return if (baseConfigElements.isNotEmpty()) {
+            val baseConfigAnt = baseConfigElements[0].getAnnotation(BaseConfig::class.java)
+            if (baseConfigElements.size > 1) {
+                sendErrorMsg("point to ${baseConfigElements[1].simpleName}. The @BaseConfig key must be unique, please specify the key for the parameter baseUrlKey in the @Request annotation")
             }
-            BaseUrlData(baseUrlAnt.key, baseUrlElements[0].simpleName.toString(), baseUrlElements[0].enclosingElement.toString())
-        } else { //@Request 注解中指定参数baseUrlKey 为 server 没有找到,请设置你的@BaseUrl并指定key为server
-            sendErrorMsg("point to $requestClass. The parameter baseUrlKey specified in the @Request annotation is not found as ${request.baseUrlKey}, please set your @BaseUrl and specify the key as ${request.baseUrlKey}")
+            BaseConfigData(baseConfigAnt.key, baseConfigAnt.enableLog, baseConfigAnt.proxyIp, baseConfigAnt.proxyPort, baseConfigElements[0].simpleName.toString(), baseConfigElements[0].enclosingElement.toString())
+        } else { //@Request 注解中指定参数baseUrlKey 为 server 没有找到,请设置你的@BaseConfig并指定key为server
+            sendErrorMsg("point to $requestClass. The parameter baseUrlKey specified in the @Request annotation is not found as ${request.baseUrlKey}, please set your @BaseConfig and specify the key as ${request.baseUrlKey}")
             null
         }
     }
@@ -768,7 +763,7 @@ import kotlin.reflect.KClass
             TAG_HEADER -> Header::class.java
             TAG_BODY -> Body::class.java
             TAG_QUERY -> Query::class.java
-            TAG_BASE_URL -> BaseUrl::class.java
+            TAG_BASE_CONFIG -> BaseConfig::class.java
             else -> Request::class.java
         }
 
@@ -789,12 +784,12 @@ import kotlin.reflect.KClass
         const val TAG_HEADER = "@Header"
         const val TAG_BODY = "@Body"
         const val TAG_QUERY = "@Query"
-        const val TAG_BASE_URL = "@BaseUrl"
+        const val TAG_BASE_CONFIG = "@BaseConfig"
         const val KAPT_KOTLIN_GENERATED = "kapt.kotlin.generated"
         const val APPLICATION_PKG = "android.app"
         const val APPLICATION = "Application"
-        const val ANDROID_VIEWMODEL_PKG = "com.hearthappy.ktorexpand.viewmodel"
-        const val ANDROID_VIEWMODEL = "BaseAndroidViewModel"
+        const val ANDROID_VIEW_MODEL_PKG = "com.hearthappy.ktorexpand.viewmodel"
+        const val ANDROID_VIEW_MODEL = "BaseAndroidViewModel"
         const val LIVEDATA_PKG = "androidx.lifecycle"
         const val MUTABLE_LIVEDATA = "MutableLiveData"
         const val LIVEDATA = "LiveData"

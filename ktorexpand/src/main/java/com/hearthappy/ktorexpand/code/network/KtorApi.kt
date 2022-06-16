@@ -7,7 +7,6 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
 import io.ktor.http.cio.*
-import io.ktor.util.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -57,13 +56,13 @@ suspend inline fun <reified Response> HttpClient.deleteRequest(url: String, head
  * @param bodyType Int
  * @param url String
  * @param headers  @Header存在时有数据
- * @param parameters  @Body = NONE,通过Params发送数据时 parameters有数据
- * @param requestBody @Body = JSON 时有数据
+ * @param parameters  @Body = NONE时， parameters有数据。通过Params发送数据时
+ * @param requestBody @Body = JSON时有数据，通过body发送数据
  * @param appends @Body = X_WWW_FormUrlEncoded 时有数据
  * @return Any?
  */
 
-suspend inline fun <reified Response> sendKtorRequest(requestType: Int, bodyType: Int, url: String, headers: HttpRequestBuilder.() -> Unit = {}, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}) = ktorClient().use {
+suspend inline fun <reified Response> sendKtorRequest(requestType: Int, bodyType: Int, url: String, headers: HttpRequestBuilder.() -> Unit = {}, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, enableLog: Boolean = true, proxyIp: String = EmptyString, proxyPort: Int = -1) = ktorClient(enableLog,proxyIp,proxyPort).use {
     when (requestType) {
         GET -> {
             when (bodyType) {
@@ -127,5 +126,6 @@ const val HTML = 104
 const val XML = 105
 const val FORM_DATA = 106
 const val X_WWW_FormUrlEncoded = 107
+const val EmptyString=""
 
 

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import io.ktor.client.statement.*
+import io.ktor.http.parsing.*
 import kotlinx.coroutines.launch
 
 
@@ -48,24 +49,18 @@ sealed class RequestState {
     object DEFAULT: RequestState()
 }
 
-inline fun <reified T> RequestState.asSucceedBody(): T? {
-    return when (this) {
-        is RequestState.SUCCEED<*> -> {
-            this.responseBody as T
-        }
-        else -> {
-            null
-        }
+inline fun <reified T> RequestState.SUCCEED<*>.asSucceedBody(): T? {
+    return try {
+        this.responseBody as T
+    } catch (e: Throwable) {
+        throw RuntimeException("Conversion exception, the response result is: ${responseBody}, your constraint type is: ${T::class.java.name}")
     }
 }
 
-fun RequestState.asFailedMessage(): ErrorMessage? {
-    return when (this) {
-        is RequestState.FAILED -> {
-            Gson().fromJson(this.failedBody.text, ErrorMessage::class.java)
-        }
-        else -> {
-            null
-        }
+fun RequestState.FAILED.asFailedMessage(): ErrorMessage? {
+    return try {
+        Gson().fromJson(failedBody.text, ErrorMessage::class.java)
+    }catch (e:Throwable){
+        throw ParseException("Parse exception, text: ${failedBody.text}, does not match type ErrorMassage")
     }
 }
