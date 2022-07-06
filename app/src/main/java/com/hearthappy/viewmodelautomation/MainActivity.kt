@@ -48,7 +48,7 @@ class MainActivity: AppCompatActivity() {
             viewModel.loginStateFlow.collect {
                 when (it) {
                     is RequestState.SUCCEED<*> -> {
-                        Log.d(TAG, "onCreate SUCCEED: ${it.responseBody}")
+                        Log.d(TAG, "onCreate SUCCEED: ${it.body}")
                     }
                     is RequestState.FAILED -> {
                         Log.d(TAG, "onCreate FAILED: ${it.failedBody}")
@@ -66,7 +66,7 @@ class MainActivity: AppCompatActivity() {
             viewModel.getAppOptionStateFlow.collect {
                 when (it) {
                     is RequestState.SUCCEED<*> -> {
-                        val s = it.responseBody as String
+                        val s = it.body as String
                         Log.d(TAG, "onCreate: $s")
                     }
                     is RequestState.FAILED -> {

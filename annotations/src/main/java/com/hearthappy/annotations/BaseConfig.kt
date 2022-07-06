@@ -9,5 +9,5 @@ package com.hearthappy.annotations
  * @property proxyPort Int
  * @constructor
  */
-@Target(AnnotationTarget.FIELD, AnnotationTarget.CLASS) @Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.FIELD, AnnotationTarget.CLASS,AnnotationTarget.PROPERTY) @Retention(AnnotationRetention.SOURCE)
 annotation class BaseConfig(val key: String = "default", val enableLog: Boolean = true, val proxyIp: String = "", val proxyPort: Int = -1)

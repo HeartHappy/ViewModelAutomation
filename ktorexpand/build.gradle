@@ -72,7 +72,19 @@ android {
     kotlinOptions {
         jvmTarget = '11'
     }
+
+    /*kotlin{
+        sourceSets{
+            all {
+                languageSettings{
+                    optIn("io.ktor.util.InternalAPI")
+                }
+            }
+        }
+    }*/
 }
+
+
 def lifecycleVersion = "2.3.0"
 def ktorVersion = "1.6.0"
 dependencies {

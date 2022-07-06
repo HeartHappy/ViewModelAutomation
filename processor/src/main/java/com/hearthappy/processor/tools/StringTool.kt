@@ -11,12 +11,24 @@ package com.hearthappy.processor.tools
  * @param missingDelimiterValue String 原有字符
  * @return String
  */
-fun String.substringMiddle(prefix: String, suffix: String, jumpOverCount: Int = 0, ignoreCount: Int = 0, missingDelimiterValue: String = this): String {
+fun String.substringMiddle(
+    prefix: String,
+    suffix: String,
+    jumpOverCount: Int = 0,
+    ignoreCount: Int = 0,
+    missingDelimiterValue: String = this
+): String {
     val prefixIndex = indexOf(prefix)
-    val delPrefixBefore = if (prefixIndex == -1) missingDelimiterValue else substring(prefixIndex + jumpOverCount, length)
+    val delPrefixBefore = if (prefixIndex == -1) missingDelimiterValue else substring(
+        prefixIndex + jumpOverCount,
+        length
+    )
     val suffixIndex = delPrefixBefore.indexOf(suffix)
 
-    return if (suffixIndex == -1) delPrefixBefore else delPrefixBefore.substring(0, suffixIndex + suffix.length - ignoreCount)
+    return if (suffixIndex == -1) delPrefixBefore else delPrefixBefore.substring(
+        0,
+        suffixIndex + suffix.length - ignoreCount
+    )
 }
 
 
@@ -26,12 +38,25 @@ fun String.asRest(prefix: String, suffix: String): String {
 }
 
 fun String.findRest(list: List<String>): List<String> {
-    return (list subtract (this.split(Regex("[{-}]")).filterNot { it.isEmpty() || it == "," })).toList()
+    return (list subtract (this.split(Regex("[{-}]"))
+        .filterNot { it.isEmpty() || it == "," })).toList()
 }
 
 fun String.removeWith(prefix: String, suffix: String): String {
     val substringMiddle = substringMiddle(prefix, suffix)
     return this.replace(substringMiddle, "")
+}
+
+
+/**
+ *
+ * @receiver String getServerBaseUrl$annotations
+ * @return String serverBaseUrl
+ */
+fun String.getBaseUrlPropertyName(): String {
+    val removePrefix = this.removePrefix("get")
+    val replaceFirstChar = removePrefix.replaceFirstChar { it.lowercase() }
+    return replaceFirstChar.removeSuffix("\$annotations")
 }
 
 
@@ -49,6 +74,7 @@ fun main() { //    val str =
 
     val url = "ReRegister(java.lang.String,java.lang.String,int,double[],java.lang.String)"
     val restUrl = "http://www.ktor.io/identity/v3/users/{username},{password}/{install}"
+
 
     val list = listOf("username", "password", "install", "age")
     val filterNot = restUrl.split(Regex("[{-}]")).filterNot { it.isEmpty() || it == "," }
