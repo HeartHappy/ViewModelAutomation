@@ -1,5 +1,6 @@
 package com.hearthappy.annotations
 
+import java.net.http.HttpResponse
 import kotlin.reflect.KClass
 
 /**
@@ -9,11 +10,10 @@ import kotlin.reflect.KClass
  * ClassDescription :LiveData注解
  */
 
-@Repeatable
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.SOURCE)
-annotation class BindLiveData(val methodName: String, //方法名称
-                              val requestClass: KClass<*> = Any::class, //url类
-                              val responseClass: KClass<out Any>, //网络响应的数据类型
-                              val liveDataName: String = "" //需要创建的liveData名称
+@Repeatable @Target(AnnotationTarget.CLASS) @Retention(AnnotationRetention.SOURCE)
+annotation class BindLiveData(
+    val methodName: String, //方法名称
+    val requestClass: KClass<*> = Any::class, //url类
+    val responseClass: KClass<*> = Any::class, //网络响应的数据类型
+    val liveDataName: String = "" //需要创建的liveData名称
 )

@@ -6,13 +6,9 @@ import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
-import io.ktor.http.cio.*
-import io.ktor.util.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 
-fun main() {
+/*fun main() {
 
     runBlocking {
         launch {
@@ -30,44 +26,28 @@ fun main() {
         }
         println("end.....")
     }
-}
+}*/
 
 fun HttpRequestBuilder.jsonHeader() {
     header(HttpHeaders.ContentType, ContentType.Application.Json)
 }
 
-suspend inline fun <reified Response> HttpClient.getRequest(
-    url: String,
-    headers: HttpRequestBuilder.() -> Unit = { jsonHeader() },
-    httpRequestScope: HttpRequestBuilder.() -> Unit
-): Response = get(urlString = url) {
+suspend inline fun <reified Response> HttpClient.getRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): Response = get(urlString = url) {
     headers()
     httpRequestScope()
 }
 
-suspend inline fun <reified Response> HttpClient.postRequest(
-    url: String,
-    headers: HttpRequestBuilder.() -> Unit = { jsonHeader() },
-    httpRequestScope: HttpRequestBuilder.() -> Unit
-): Response = post(urlString = url) {
+suspend inline fun <reified Response> HttpClient.postRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): Response = post(urlString = url) {
     headers()
     httpRequestScope()
 }
 
-suspend inline fun <reified Response> HttpClient.patchRequest(
-    url: String,
-    headers: HttpRequestBuilder.() -> Unit = { jsonHeader() },
-    httpRequestScope: HttpRequestBuilder.() -> Unit
-): Response = patch(urlString = url) {
+suspend inline fun <reified Response> HttpClient.patchRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): Response = patch(urlString = url) {
     headers()
     httpRequestScope()
 }
 
-suspend inline fun <reified Response> HttpClient.deleteRequest(
-    url: String,
-    headers: HttpRequestBuilder.() -> Unit = { jsonHeader() },
-    httpRequestScope: HttpRequestBuilder.() -> Unit
-): Response = delete(urlString = url) {
+suspend inline fun <reified Response> HttpClient.deleteRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): Response = delete(urlString = url) {
     headers()
     httpRequestScope()
 }
@@ -84,27 +64,14 @@ suspend inline fun <reified Response> HttpClient.deleteRequest(
  * @param appends @Body = X_WWW_FormUrlEncoded 时有数据
  * @return Any?
  */
-suspend inline fun <reified Response> sendKtorRequest(
-    requestType: Int,
-    bodyType: Int,
-    url: String,
-    headers: HttpRequestBuilder.() -> Unit = {},
-    parameters: HttpRequestBuilder.() -> Unit = {},
-    requestBody: Any = EmptyContent,
-    appends: ParametersBuilder.() -> Unit = {},
-    enableLog: Boolean = true,
-    proxyIp: String = EmptyString,
-    proxyPort: Int = -1
-) = ktorClient(enableLog, proxyIp, proxyPort).use {
+suspend inline fun <reified Response> sendKtorRequest(requestType: Int, bodyType: Int, url: String, headers: HttpRequestBuilder.() -> Unit = {}, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, enableLog: Boolean = true, proxyIp: String = EmptyString, proxyPort: Int = -1) = ktorClient(enableLog, proxyIp, proxyPort).use {
     when (requestType) {
         GET -> {
             when (bodyType) {
                 NONE -> it.getRequest(url, headers) { parameters() }
                 TEXT -> it.getRequest(url, headers) { body = GsonSerializer().write(requestBody) }
                 JSON -> it.getRequest(url, headers) { body = requestBody }
-                FORM_DATA -> it.submitForm(
-                    url = url, Parameters.build(appends), encodeInQuery = true
-                ) { headers() }
+                FORM_DATA -> it.submitForm(url = url, Parameters.build(appends), encodeInQuery = true) { headers() }
                 X_WWW_FormUrlEncoded -> it.getRequest(url, headers) {
                     body = FormDataContent(Parameters.build(appends))
                 }

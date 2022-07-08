@@ -1,5 +1,7 @@
 package com.hearthappy.processor.tools
 
+import com.squareup.kotlinpoet.ClassName
+
 
 /**
  * 如果字符串出现多次，只会返回第一个出现的
@@ -20,14 +22,12 @@ fun String.substringMiddle(
 ): String {
     val prefixIndex = indexOf(prefix)
     val delPrefixBefore = if (prefixIndex == -1) missingDelimiterValue else substring(
-        prefixIndex + jumpOverCount,
-        length
+        prefixIndex + jumpOverCount, length
     )
     val suffixIndex = delPrefixBefore.indexOf(suffix)
 
     return if (suffixIndex == -1) delPrefixBefore else delPrefixBefore.substring(
-        0,
-        suffixIndex + suffix.length - ignoreCount
+        0, suffixIndex + suffix.length - ignoreCount
     )
 }
 
@@ -59,6 +59,38 @@ fun String.getBaseUrlPropertyName(): String {
     return replaceFirstChar.removeSuffix("\$annotations")
 }
 
+/**
+ * 拆分包，将全类名分割成包和类
+ * @param fullClassName String
+ * @return Pair<String, String>
+ */
+fun splitPackage(fullClassName: String): Pair<String, String> {
+    val lastIndexOf = fullClassName.lastIndexOf(".")
+    val packageName = fullClassName.subSequence(0, lastIndexOf)
+    val className = fullClassName.subSequence(lastIndexOf + 1, fullClassName.length)
+    return Pair(packageName.toString(), className.toString())
+}
+
+fun String.asKotlinClassName(): ClassName {
+    val splitPackage = splitPackage(asKotlinPackage(this))
+    return ClassName(splitPackage.first, splitPackage.second)
+}
+
+fun asKotlinPackage(javaPackage: String) = when (javaPackage) {
+    in "java.lang.Object" -> "kotlin.Any"
+    in "java.lang.String" -> "kotlin.String"
+    in "int", "Int" -> "kotlin.Int"
+    in "int[]" -> "kotlin.IntArray"
+    in "long" -> "kotlin.Long"
+    in "long[]" -> "kotlin.LongArray"
+    in "boolean" -> "kotlin.Boolean"
+    in "boolean[]" -> "kotlin.BooleanArray"
+    in "float" -> "kotlin.Float"
+    in "float[]" -> "kotlin.FloatArray"
+    in "double" -> "kotlin.Double"
+    in "double[]" -> "kotlin.DoubleArray"
+    else -> javaPackage
+}
 
 fun main() { //    val str =
     //        "<script>var player=unescape(%2F%6A%73%2F%70%6C%61%79%65%72%2F%41%70%6C%61%79%65%72%2E%68%74%6D%6C%3F%75%72%6C%3D%68%74%74%70%73%3A%2F%2F%76%69%70%34%2E%64%64%79%75%6E%62%6F%2E%63%6F%6D%2F%32%30%32%31%30%36%30%38%2F%78%58%38%6A%70%64%68%57%2F%69%6E%64%65%78%2E%6D%33%75%38);var pn='Aplayer';</script>"

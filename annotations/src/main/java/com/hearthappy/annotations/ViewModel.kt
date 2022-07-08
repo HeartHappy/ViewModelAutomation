@@ -10,5 +10,5 @@ package com.hearthappy.annotations
  */
 
 @Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.BINARY)
+@Retention(AnnotationRetention.SOURCE)
 annotation class ViewModel(val viewModelClassName: String)

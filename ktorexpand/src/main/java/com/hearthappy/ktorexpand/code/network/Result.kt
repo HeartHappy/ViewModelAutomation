@@ -73,20 +73,20 @@ data class FailedBody(val statusCode: Int, val text: String?)
 
 data class ErrorMessage(val error: String)
 
-inline fun <reified T> RequestState.SUCCEED<*>.asSucceedBody(): T? {
-    return try {
-        this.body as T
-    } catch (e: Throwable) {
-        throw RuntimeException("Conversion exception, the response result is: ${body}, your constraint type is: ${T::class.java.name}")
-    }
-}
-
 
 fun RequestState.FAILED.asFailedMessage(): ErrorMessage? {
     return try {
         Gson().fromJson(failedBody.text, ErrorMessage::class.java)
     } catch (e: Throwable) {
         throw ParseException("Parse exception, text: ${failedBody.text}, does not match type ErrorMassage")
+    }
+}
+
+fun RequestState.Throwable.asThrowableMessage(): String {
+    return try {
+        this.throwable.message.toString()
+    } catch (e: Throwable) {
+        throw ParseException("Parse exception, $e")
     }
 }
 
@@ -103,7 +103,7 @@ fun isJsonString(content: String): Boolean {
         if (!isJson) return@forEach
     }
 
-    return if (content.contains("[") && content.contains("]")) {
+    return if (isJson && content.contains("[") && content.contains("]")) {
         true
     } else isJson
 }

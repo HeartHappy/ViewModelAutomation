@@ -6,9 +6,9 @@ import com.hearthappy.processor.log.errorMessage
 import com.hearthappy.processor.log.noteMessage
 import com.hearthappy.processor.model.*
 import com.hearthappy.processor.tools.*
-import com.squareup.kotlinpoet.*
-import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
-import java.io.File
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.TypeSpec
 import java.util.*
 import javax.annotation.processing.AbstractProcessor
 import javax.annotation.processing.Processor
@@ -17,8 +17,6 @@ import javax.lang.model.SourceVersion
 import javax.lang.model.element.Element
 import javax.lang.model.element.ElementKind
 import javax.lang.model.element.TypeElement
-import javax.lang.model.type.MirroredTypeException
-import kotlin.reflect.KClass
 
 /**
  * @Author ChenRui
@@ -90,8 +88,7 @@ import kotlin.reflect.KClass
     }
 
     private fun handlerAndroidViewModel(
-        androidViewModelElements: MutableSet<out Element>,
-        requestDataList: List<RequestData>
+        androidViewModelElements: MutableSet<out Element>, requestDataList: List<RequestData>
     ): Boolean {
         if (androidViewModelElements.isEmpty()) {
             return sendErrorMsg("The AndroidViewModel annotation was not found. Please declare AndroidViewModel annotations for Activity or Fragment")
@@ -111,263 +108,25 @@ import kotlin.reflect.KClass
             val classBuilder = builderViewModelClassSpec(viewModelClassName)
 
             //通过BindLiveData创建属性、方法
-            generatePropertyAndMethodByLiveData(classBuilder, requestDataList, bindLiveData)
+            generatePropertyAndMethodByLiveData(
+                classBuilder, requestDataList, bindLiveData
+            ) { bld, requestDataList, viewModelParam ->
+                sendNoteMsg("==================> Create LiveData: ${bld.methodName} function") //通过类型别名创建函数参数
+                generateFunctionByLiveData(bld, requestDataList, viewModelParam, classBuilder)
+            }
 
             //通过BindStateFlow创建属性、方法
-            generatePropertyAndMethodByStateFlow(classBuilder, requestDataList, bindStateFlow)
+            generatePropertyAndMethodByStateFlow(
+                classBuilder, requestDataList, bindStateFlow
+            ) { bsf, requestDataList, viewModelParam ->
+                sendNoteMsg("==================> Create StateFlow: ${bsf.methodName} function") //创建公开属性
+                generateFunctionByStateFlow(bsf, requestDataList, viewModelParam, classBuilder)
+            }
 
             //写入文件
             generateFileAndWrite(viewModelClassName, classBuilder, generatedSource)
-
         }
         return true
-    }
-
-    private fun generatePropertyAndMethodByStateFlow(
-        classBuilder: TypeSpec.Builder,
-        requestDataList: List<RequestData>,
-        bindStateFlow: Array<BindStateFlow>?
-    ) {
-        bindStateFlow?.apply {
-            val mutableStateFlow = ClassName(STATE_FLOW_PKG, MUTABLE_STATE_FLOW)
-            val stateFlow = ClassName(STATE_FLOW_PKG, STATE_FLOW)
-            val requestState = ClassName(KTOR_NETWORK_PKG, KTOR_REQUEST_STATE)
-            forEach {
-                val viewModelParam = it.getViewModelParam()
-                sendNoteMsg("==================> Create a private StateFlow")
-                generatePrivateProperty(
-                    propertyName = viewModelParam.priPropertyName,
-                    propertyType = mutableStateFlow.parameterizedBy(requestState),
-                    delegateValue = "$MUTABLE_STATE_FLOW($KTOR_REQUEST_STATE.DEFAULT)",
-                    addToClass = classBuilder,
-                    KModifier.PRIVATE
-                )
-
-                sendNoteMsg("==================> Create a public StateFlow") //创建公开属性
-                generatePublicProperty(
-                    propertyName = viewModelParam.pubPropertyName,
-                    propertyType = stateFlow.parameterizedBy(requestState),
-                    initValue = viewModelParam.priPropertyName,
-                    addToClass = classBuilder
-                )
-
-                sendNoteMsg("==================> Create StateFlow: ${it.methodName} function") //创建公开属性
-                generateFunctionByStateFlow(it, requestDataList, viewModelParam, classBuilder)
-            }
-        }
-    }
-
-
-    private fun generatePropertyAndMethodByLiveData(
-        classBuilder: TypeSpec.Builder,
-        requestDataList: List<RequestData>,
-        bindLiveData: Array<BindLiveData>?
-    ) {
-        bindLiveData?.apply {
-            val mutableLiveData = ClassName(LIVEDATA_PKG, MUTABLE_LIVEDATA)
-            val liveData = ClassName(LIVEDATA_PKG, LIVEDATA)
-            val result = ClassName(KTOR_NETWORK_PKG, LIVEDATA_RESULT)
-            forEach {
-                val viewModelParam = it.getViewModelParam()
-
-                sendNoteMsg("==================> Create private LiveData") //创建私有属性
-                generatePrivateProperty(
-                    propertyName = viewModelParam.priPropertyName,
-                    propertyType = mutableLiveData.parameterizedBy(
-                        result.parameterizedBy(viewModelParam.responseBody)
-                    ),
-                    delegateValue = "$MUTABLE_LIVEDATA()",
-                    addToClass = classBuilder,
-                    KModifier.PRIVATE
-                )
-
-                sendNoteMsg("==================> Create public LiveData") //创建公开属性
-                generatePublicProperty(
-                    propertyName = viewModelParam.pubPropertyName,
-                    propertyType = liveData.parameterizedBy(result.parameterizedBy(viewModelParam.responseBody)),
-                    initValue = viewModelParam.priPropertyName,
-                    addToClass = classBuilder
-                )
-
-                sendNoteMsg("==================> Create LiveData: ${it.methodName} function") //通过类型别名创建函数参数
-                generateFunctionByLiveData(it, requestDataList, viewModelParam, classBuilder)
-            }
-        }
-    }
-
-    private fun generateFunctionByLiveData(
-        it: BindLiveData,
-        requestDataList: List<RequestData>,
-        viewModelParam: GenerateViewModelData,
-        classBuilder: TypeSpec.Builder
-    ) {
-        val function = FunSpec.builder(it.methodName).apply {
-            generateMethodParametersSpec(requestDataList, viewModelParam)
-            generateMethodRequestScope(requestDataList, viewModelParam)
-            addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Error(it))},")
-            addStatement("onSucceed = { body, _ ->${viewModelParam.priPropertyName}.postValue(Result.Success(body))},")
-            addStatement("onThrowable = { ${viewModelParam.priPropertyName}.postValue(Result.Throwable(it))}")
-            addStatement(")")
-        }
-        classBuilder.addFunction(function.build())
-    }
-
-
-    private fun generateFunctionByStateFlow(
-        it: BindStateFlow,
-        requestDataList: List<RequestData>,
-        viewModelParam: GenerateViewModelData,
-        classBuilder: TypeSpec.Builder
-    ) {
-        val function = FunSpec.builder(it.methodName).apply {
-            generateMethodParametersSpec(requestDataList, viewModelParam)
-            addStatement("${viewModelParam.priPropertyName}.value = $KTOR_REQUEST_STATE.LOADING")
-            generateMethodRequestScope(requestDataList, viewModelParam)
-            addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = $KTOR_REQUEST_STATE.FAILED(it) },")
-            addStatement("onSucceed = { body,response-> ${viewModelParam.priPropertyName}.value = $KTOR_REQUEST_STATE.SUCCEED(body,response) },")
-            addStatement("onThrowable = { ${viewModelParam.priPropertyName}.value = $KTOR_REQUEST_STATE.Throwable(it) }")
-            addStatement(")")
-        }
-        classBuilder.addFunction(function.build())
-    }
-
-
-    private fun FunSpec.Builder.generateMethodRequestScope(
-        requestDataList: List<RequestData>,
-        viewModelParam: GenerateViewModelData
-    ) {
-        if (requestDataList.isEmpty()) {
-            addStatement("requestScope<${viewModelParam.responseBody}>(io = io,")
-        } else {
-            val findRequestData =
-                requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }
-            addStatement("requestScope<${viewModelParam.responseBody}>(io = {")
-
-            findRequestData?.apply {
-                generateRequestApi(
-                    requestType,
-                    requestBodyData.bodyType,
-                    url,
-                    headers,
-                    requestParameters,
-                    requestBodyData.jsonParameterName,
-                    requestBodyData.xwfParameters,
-                    baseConfigData
-                )
-            }
-            addStatement("},")
-        }
-    }
-
-
-    /**
-     * 生成网络请求接口
-     * @receiver FunSpec.Builder
-     * @param requestType RequestType
-     * @param bodyType BodyType
-     * @param url String
-     * @param headers List<HeaderData>?
-     * @param parameters List<String>?
-     * @param requestBody Any?
-     * @param appends Pair<String, Map<String, String>>?
-     */
-    private fun FunSpec.Builder.generateRequestApi(
-        requestType: RequestType,
-        bodyType: BodyType,
-        url: String,
-        headers: List<HeaderData>? = null,
-        parameters: List<String>? = null,
-        requestBody: Any? = null,
-        appends: Pair<String, Map<String, String>>? = null,
-        baseConfigData: BaseConfigData?
-    ) {
-
-        addStatement("sendKtorRequest<HttpResponse>(requestType=${requestType},bodyType=${bodyType},url=\"$url\"")
-        if (headers?.isNotEmpty() == true) {
-            headers.apply {
-                addStatement(",headers={")
-                forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
-                addStatement("}")
-            }
-        }
-
-        if (parameters?.isNotEmpty() == true && !parameters.contains(appends?.first)) {
-            parameters.apply {
-                addStatement(",parameters={")
-                forEach { parameter -> addStatement("parameter(\"${parameter}\", ${parameter})") }
-                addStatement("}")
-            }
-        }
-
-        requestBody?.apply {
-            addStatement(",requestBody=$requestBody")
-        }
-
-        if (appends?.second?.isNotEmpty() == true) {
-            appends.apply {
-                addStatement(",appends={")
-                second.forEach { (queryName, queryValue) -> addStatement("append(\"${queryName}\", ${this.first}.${queryValue})") }
-                addStatement("}")
-            }
-        }
-        baseConfigData?.let {
-            if (!it.enabledLog) {
-                addStatement(",enableLog=${it.enabledLog}")
-            } // TODO: 需要修改成动态代理 ，现在是静态代理
-            if (it.proxyIp.isNotEmpty() && it.proxyPort != -1) {
-                addStatement(",proxyIp=\"${it.proxyIp}\",proxyPort=${it.proxyPort}")
-            }
-        }
-        addStatement(")")
-    }
-
-
-    /**
-     * 通过Annotation获取生成ViewModel所需参数
-     * @return GenerateViewModelData
-     */
-    private fun Annotation.getViewModelParam(): GenerateViewModelData {
-        var requestClass = ""
-        var responseClass = ""
-        var pubPropertyName = ""
-        when (this) {
-            is BindLiveData -> {
-                requestClass = getAnnotationValue { it.requestClass }.toString()
-                responseClass = getAnnotationValue { bld -> bld.responseClass }.toString()
-                pubPropertyName = liveDataName.ifEmpty { methodName.plus(LIVEDATA) }
-            }
-            is BindStateFlow -> {
-                requestClass = getAnnotationValue { it.requestClass }.toString()
-                responseClass = getAnnotationValue { bld -> bld.responseClass }.toString()
-                pubPropertyName = stateFlowName.ifEmpty { methodName.plus(STATE_FLOW) }
-            }
-        }
-
-
-        val priPropertyName = privateName(pubPropertyName)
-
-        val requestPackage = splitPackage(asKotlinPackage(requestClass))
-        val requestBody = ClassName(requestPackage.first, requestPackage.second)
-
-        val responsePackage = splitPackage(asKotlinPackage(responseClass))
-        val responseBody = ClassName(responsePackage.first, responsePackage.second)
-        return GenerateViewModelData(requestBody, responseBody, pubPropertyName, priPropertyName)
-    }
-
-    private fun FunSpec.Builder.generateMethodParametersSpec(
-        requestDataList: List<RequestData>,
-        viewModelParam: GenerateViewModelData
-    ) { //没有@Request注解时，由开发者自定义请求
-        if (requestDataList.isEmpty()) {
-            addParameter(
-                "io",
-                LambdaTypeName.get(returnType = viewModelParam.responseBody).copy(suspending = true)
-            )
-        } else { //有@Request注解时，自动生成响应请求
-            requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }?.methodParameters?.forEach {
-                addParameter(it.parameterName, it.parameterType.asKotlinClassName())
-            }
-        }
     }
 
     private fun builderViewModelClassSpec(viewModelClassName: String): TypeSpec.Builder {
@@ -378,48 +137,9 @@ import kotlin.reflect.KClass
         return classBuilder
     }
 
-    // TODO:优化所需导入的响应类，根据响应类型的包名进行遍历导包
-    private fun generateFileAndWrite(
-        viewModelClassName: String,
-        classBuilder: TypeSpec.Builder,
-        generatedSource: String
-    ) { //创建文件
-        //创建文件,导包并取别名import xxx.requestScopeX as RequestScope
-        sendNoteMsg("==================> Create a file and write the class to the file")
-        val packageName = "com.hearthappy.compiler"
-        val file = FileSpec.builder(packageName, viewModelClassName)
-
-            //                .addAliasedImport(requestScopeX, "RequestScope") //导包取别名
-            //                .addTypeAlias(typeAlias).build() //文件内添加类型别名
-            .addImport(
-                KTOR_NETWORK_PKG,
-                KTOR_REQUEST_SCOPE,
-                KTOR_REQUEST,
-                GET,
-                POST,
-                PATCH,
-                DELETE,
-                NONE,
-                TEXT,
-                HTML,
-                XML,
-                JSON,
-                FORM_DATA,
-                X_WWW_FormUrlEncoded
-            ) //            .addImport(KTOR_NETWORK_PKG,"*")
-            .addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER, KTOR_HEADER).addImport(
-                KTOR_CLIENT_RESPONSE_PKG,
-                HTTP_RESPONSE
-            ) //            .addImport(KTOR_CLIENT_RESPONSE_PKG)
-            .addType(classBuilder.build()).build()
-
-
-        file.writeTo(File(generatedSource))
-    }
-
 
     /**
-     * 获取参数列表，根据Class注解,使用场景：请求为GET、FormUrlEncoded、POST（@Body注解声明在Class上）
+     * 获取参数列表，根据Class,使用场景：请求为FormUrlEncoded、POST等使用@Body注解时并且声明在Class上
      * @param requestElement Element
      * @return List<ParameterData>
      */
@@ -427,9 +147,7 @@ import kotlin.reflect.KClass
         val params = mutableListOf<String>()
         for (ele in requestElement.enclosedElements) { //获取参数类型和参数数量
             val paramName = ele.simpleName.toString()
-            if (paramName == "<init>" || paramName.contains("get") || paramName.first()
-                    .isUpperCase()
-            ) continue
+            if (paramName == "<init>" || paramName.contains("get") || paramName.first().isUpperCase()) continue
 
             if (ele.simpleName.toString() == "copy") {
                 val substringMiddle = ele.toString().substringMiddle("(", ")", 1, 1)
@@ -443,81 +161,17 @@ import kotlin.reflect.KClass
     }
 
 
-    private fun generatePublicProperty(
-        propertyName: String,
-        propertyType: ParameterizedTypeName,
-        initValue: String,
-        addToClass: TypeSpec.Builder,
-        vararg modifier: KModifier,
-    ) {
-        addToClass.addProperty(
-            PropertySpec.builder(propertyName, propertyType).initializer(initValue)
-                .addModifiers(*modifier).build()
-        )
-    }
-
-    private fun generatePrivateProperty(
-        propertyName: String,
-        propertyType: ParameterizedTypeName,
-        delegateValue: String,
-        addToClass: TypeSpec.Builder,
-        vararg modifier: KModifier,
-    ) {
-        addToClass.addProperty(
-            PropertySpec.builder(propertyName, propertyType).delegate("lazy{$delegateValue}")
-                .addModifiers(*modifier).build()
-        )
-    }
-
-
     private fun generatedFinish(): Boolean {
         println("==================> build complete")
         return true
     }
 
 
-    private fun privateName(name: String) = "_$name"
-
-
-    /**
-     * 拆分包，将全类名分割成包和类
-     * @param fullClassName String
-     * @return Pair<String, String>
-     */
-    private fun splitPackage(fullClassName: String): Pair<String, String> {
-        val lastIndexOf = fullClassName.lastIndexOf(".")
-        val packageName = fullClassName.subSequence(0, lastIndexOf)
-        val className = fullClassName.subSequence(lastIndexOf + 1, fullClassName.length)
-        return Pair(packageName.toString(), className.toString())
-    }
-
-    private fun String.asKotlinClassName(): ClassName {
-        val splitPackage = splitPackage(asKotlinPackage(this))
-        return ClassName(splitPackage.first, splitPackage.second)
-    }
-
     private fun String.asBaseUrlClassName(baseUrlPackagePath: String): ClassName {
         val splitPackage = splitPackage(asKotlinPackage(this))
         return ClassName(splitPackage.first, baseUrlPackagePath)
     }
 
-    /**
-     * 获取注解参数为KClass<*>会出现异常时，通过异常获取返回值
-     * @receiver BindLiveData
-     * @return (Any..Any?)
-     */
-    private fun BindLiveData.getAnnotationValue(block: (BindLiveData) -> KClass<*>) = try {
-        block(this)
-    } catch (e: MirroredTypeException) {
-        e.typeMirror
-    }
-
-
-    private fun BindStateFlow.getAnnotationValue(block: (BindStateFlow) -> KClass<*>) = try {
-        block(this)
-    } catch (e: MirroredTypeException) {
-        e.typeMirror
-    }
 
     /*inline fun <reified T : Annotation> Element.getAnnotationKClass(block: T.() -> KClass<*>) = try {
         getAnnotation(T::class.java).block()
@@ -525,21 +179,6 @@ import kotlin.reflect.KClass
         e.typeMirror
     }*/
 
-    private fun asKotlinPackage(javaPackage: String) = when (javaPackage) {
-        in "java.lang.Object" -> "kotlin.Any"
-        in "java.lang.String" -> "kotlin.String"
-        in "int", "Int" -> "kotlin.Int"
-        in "int[]" -> "kotlin.IntArray"
-        in "long" -> "kotlin.Long"
-        in "long[]" -> "kotlin.LongArray"
-        in "boolean" -> "kotlin.Boolean"
-        in "boolean[]" -> "kotlin.BooleanArray"
-        in "float" -> "kotlin.Float"
-        in "float[]" -> "kotlin.FloatArray"
-        in "double" -> "kotlin.Double"
-        in "double[]" -> "kotlin.DoubleArray"
-        else -> javaPackage
-    }
 
     private fun extractName(className: String) = when {
         className.contains("Activity") -> className.substringBefore("Activity")
@@ -556,6 +195,7 @@ import kotlin.reflect.KClass
         val requestElements = roundEnv.getElementsAnnotatedWith(Request::class.java)
         val baseConfigElements = roundEnv.getElementsAnnotatedWith(BaseConfig::class.java)
         val headersElements = roundEnv.getElementsAnnotatedWith(Header::class.java)
+        val fixedHeadersElements = roundEnv.getElementsAnnotatedWith(Headers::class.java)
         val bodyElements = roundEnv.getElementsAnnotatedWith(Body::class.java)
             .filterNot { it.enclosingElement.toString().contains("copy") }.toMutableSet()
         val queryElements = roundEnv.getElementsAnnotatedWith(Query::class.java)
@@ -573,8 +213,7 @@ import kotlin.reflect.KClass
         requestElements.forEach { requestElement ->
             val requestAnt = requestElement.getAnnotation(Request::class.java)
             val baseConfigData = baseConfigElements.filterBaseUrlByRequestClass(
-                requestAnt,
-                requestElement.simpleName.toString()
+                requestAnt, requestElement.simpleName.toString()
             )
             val headerElements = headersElements.filterHeaderAntByRequestClass(requestElement)
             val headers = headerElements.map {
@@ -586,6 +225,10 @@ import kotlin.reflect.KClass
 
             //获取body相关参数
             val requestBodyData = getRequestBodyData(bodyElements, queryElements, requestElement)
+
+            //查找固定headers请求头
+            val fixedHeaders = getFixedHeaders(fixedHeadersElements, requestElement)
+
             sendNoteMsg("getRequestBodyData:${requestElement.simpleName},$requestBodyData")
 
             //获取方法参数
@@ -601,6 +244,7 @@ import kotlin.reflect.KClass
                 requestUrl,
                 baseConfigData,
                 headers,
+                fixedHeaders,
                 methodParameters,
                 requestParameters,
                 requestBodyData
@@ -610,6 +254,18 @@ import kotlin.reflect.KClass
         }
         return requestDataList
     }
+
+
+    /**
+     * 获取固定Headers
+     * @param fixedHeadersElements MutableSet<out Element>
+     * @param requestElement Element
+     * @return List<String>?
+     */
+    private fun getFixedHeaders(
+        fixedHeadersElements: MutableSet<out Element>, requestElement: Element
+    ) = fixedHeadersElements.find { it.simpleName == requestElement.simpleName }
+        ?.getAnnotation(Headers::class.java)?.headers?.toList()
 
 
     /**
@@ -637,8 +293,7 @@ import kotlin.reflect.KClass
      * @return List<String>
      */
     private fun getCurrentBodyQueryMap(
-        currentBodyElement: Element,
-        queryElements: MutableSet<out Element>
+        currentBodyElement: Element, queryElements: MutableSet<out Element>
     ): Map<String, String> {
         val queryMap = mutableMapOf<String, String>()
         queryElements.forEach { query -> //遍历当前Body相同类名的Query的属性值
@@ -660,16 +315,13 @@ import kotlin.reflect.KClass
      * @return RequestBodyData
      */
     private fun createRequestBodyData(
-        bodyType: BodyType,
-        currentBodyElement: Element,
-        queryElements: MutableSet<out Element>
+        bodyType: BodyType, currentBodyElement: Element, queryElements: MutableSet<out Element>
     ): RequestBodyData {
         val currentBodyParameterName = getCurrentBodyParameterName(currentBodyElement)
         return if (bodyType == BodyType.X_WWW_FormUrlEncoded) { //创建XWF数据类型所需的参数@Query列表
             val currentBodyQueryMap = getCurrentBodyQueryMap(currentBodyElement, queryElements)
             if (currentBodyQueryMap.isEmpty()) sendErrorMsg("The request class is ${currentBodyElement.asType()}, the specified BodyType is X_WWW_FormUrlEncoded, but the Query annotation is not declared, resulting in an error")
-            RequestBodyData(
-                bodyType,
+            RequestBodyData(bodyType,
                 xwfParameters = currentBodyParameterName?.run { Pair(this, currentBodyQueryMap) })
         } else { //创建Json数据类型的参数
             RequestBodyData(bodyType, jsonParameterName = currentBodyParameterName)
@@ -684,8 +336,7 @@ import kotlin.reflect.KClass
      * @return Element?
      */
     private fun getCurrentBodyElement(
-        bodyElements: MutableSet<out Element>,
-        requestElement: Element
+        bodyElements: MutableSet<out Element>, requestElement: Element
     ): Element? {
         return bodyElements.find {
             if (it.kind == ElementKind.CLASS) it.simpleName == requestElement.simpleName else it.enclosingElement.toString()
@@ -798,20 +449,7 @@ import kotlin.reflect.KClass
             }
             else -> {
             }
-        }/*when (requestType) {
-            RequestType.GET, RequestType.DELETE -> parameters.addAll(getAllParameterByRequestClass(requestElement))
-            RequestType.PATCH, RequestType.POST -> {
-                requestBodyData?.bodyType?.let { bodyType ->
-                    when (bodyType) {
-                        BodyType.NONE -> {}
-                        BodyType.JSON, BodyType.X_WWW_FormUrlEncoded -> {
-                            parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
-                        }
-                        else -> {}
-                    }
-                }
-            }
-        }*/
+        }
         return parameters
     }
 
@@ -823,8 +461,7 @@ import kotlin.reflect.KClass
      * @return List<ParameterData>
      */
     private fun getMethodParameterByBodyKind(
-        bodyElements: MutableSet<out Element>,
-        requestElement: Element
+        bodyElements: MutableSet<out Element>, requestElement: Element
     ): List<ParameterData> {
         val filterBodyElements = bodyElements.filterBodyAntByRequestClass(requestElement)
         if (filterBodyElements.isEmpty()) {
@@ -867,8 +504,7 @@ import kotlin.reflect.KClass
      * @param request Request
      */
     private fun MutableSet<out Element>.filterBaseUrlByRequestClass(
-        request: Request,
-        requestClass: String
+        request: Request, requestClass: String
     ): BaseConfigData? {
         val baseConfigElements =
             this.filter { it.getAnnotation(BaseConfig::class.java).key == request.baseUrlKey }
@@ -877,8 +513,7 @@ import kotlin.reflect.KClass
 
             if (baseConfigElements.size > 1) {
                 sendErrorMsg("point to ${baseConfigElements[1].simpleName}. The @BaseConfig key must be unique, please specify the key for the parameter baseUrlKey in the @Request annotation")
-            }
-            outElementLog(TAG_BASE_CONFIG, baseConfigElements[0])
+            } //            outElementLog(TAG_BASE_CONFIG, baseConfigElements[0])
             BaseConfigData(
                 baseConfigAnt.key,
                 baseConfigAnt.enableLog,
@@ -923,7 +558,7 @@ import kotlin.reflect.KClass
         return this.filter { it.asType() == requestElement.asType() }
     }
 
-    private fun sendNoteMsg(msg: String) {
+    internal fun sendNoteMsg(msg: String) {
         processingEnv.noteMessage { msg }
     }
 
@@ -963,46 +598,6 @@ import kotlin.reflect.KClass
         sendNoteMsg("$tag asType:${element.asType()}")
         sendNoteMsg("$tag element:${element}")
         sendNoteMsg("-------------------------end--------------------------")
-    }
-
-    companion object {
-        const val TAG_REQUEST = "@Request"
-        const val TAG_HEADER = "@Header"
-        const val TAG_BODY = "@Body"
-        const val TAG_QUERY = "@Query"
-        const val TAG_BASE_CONFIG = "@BaseConfig"
-        const val KAPT_KOTLIN_GENERATED = "kapt.kotlin.generated"
-        const val APPLICATION_PKG = "android.app"
-        const val APPLICATION = "Application"
-        const val ANDROID_VIEW_MODEL_PKG = "com.hearthappy.ktorexpand.viewmodel"
-        const val ANDROID_VIEW_MODEL = "BaseAndroidViewModel"
-        const val LIVEDATA_PKG = "androidx.lifecycle"
-        const val MUTABLE_LIVEDATA = "MutableLiveData"
-        const val LIVEDATA = "LiveData"
-        const val KTOR_NETWORK_PKG = "com.hearthappy.ktorexpand.code.network"
-        const val KTOR_CLIENT_REQUEST_PKG = "io.ktor.client.request"
-        const val KTOR_CLIENT_RESPONSE_PKG = "io.ktor.client.statement"
-        const val KTOR_REQUEST_SCOPE = "requestScope"
-        const val KTOR_REQUEST_STATE = "RequestState"
-        const val KTOR_REQUEST = "sendKtorRequest"
-        const val GET = "GET"
-        const val POST = "POST"
-        const val PATCH = "PATCH"
-        const val DELETE = "DELETE"
-        const val NONE = "NONE"
-        const val TEXT = "TEXT"
-        const val JSON = "JSON"
-        const val HTML = "HTML"
-        const val XML = "XML"
-        const val FORM_DATA = "FORM_DATA"
-        const val X_WWW_FormUrlEncoded = "X_WWW_FormUrlEncoded"
-        const val KTOR_PARAMETER = "parameter"
-        const val KTOR_HEADER = "header"
-        const val LIVEDATA_RESULT = "Result"
-        const val HTTP_RESPONSE = "HttpResponse"
-        const val STATE_FLOW_PKG = "kotlinx.coroutines.flow"
-        const val MUTABLE_STATE_FLOW = "MutableStateFlow"
-        const val STATE_FLOW = "StateFlow"
     }
 }
 

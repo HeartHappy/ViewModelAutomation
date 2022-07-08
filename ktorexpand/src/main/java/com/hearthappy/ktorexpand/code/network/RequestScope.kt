@@ -13,12 +13,12 @@ inline fun <reified R> ViewModel.requestScope(crossinline io: suspend () -> Http
 }
 
 
-sealed class RequestState {
-    object LOADING: RequestState()
-    data class SUCCEED<T>(val body: T, val response: HttpResponse): RequestState()
-    data class FAILED(val failedBody: FailedBody): RequestState()
-    data class Throwable(val throwable: kotlin.Throwable): RequestState()
-    object DEFAULT: RequestState()
+sealed class RequestState<out T> {
+    object LOADING: RequestState<Nothing>()
+    data class SUCCEED<T>(val body: T, val response: HttpResponse): RequestState<T>()
+    data class FAILED(val failedBody: FailedBody): RequestState<Nothing>()
+    data class Throwable(val throwable: kotlin.Throwable): RequestState<Nothing>()
+    object DEFAULT: RequestState<Nothing>()
 }
 
 /*fun <T> BaseAndroidViewModel.requestScope(
