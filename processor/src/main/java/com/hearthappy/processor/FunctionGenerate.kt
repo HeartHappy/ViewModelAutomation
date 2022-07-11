@@ -104,7 +104,7 @@ private fun FunSpec.Builder.generateRequestApi(
 
     //    if (headers?.isNotEmpty() == true) {
     addStatement(",headers={")
-    fixedHeaders?.forEach { addStatement("header(${it.asFixedHeader()})") }?:addStatement("header($jsonHeader)")
+    fixedHeaders?.forEach { addStatement("header(${it.asFixedHeader()})") }?:addStatement("header($Application_Json)")
     headers?.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
     addStatement("}") //    }
 
