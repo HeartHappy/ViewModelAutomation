@@ -21,25 +21,5 @@ sealed class RequestState<out T> {
     object DEFAULT: RequestState<Nothing>()
 }
 
-/*fun <T> BaseAndroidViewModel.requestScope(
-    io: suspend () -> T,
-    onSucceed: (T) -> Unit,
-    onFailure: (failure: FailedBody) -> Unit,
-) {
-    if (CheckNetworkConnect.isNetworkConnected(context)) {
-        viewModelScope.launch {
-            kotlin.runCatching {
-                io()
-            }.onSuccess {
-                Log.i(TAG, "requestScopeX: onSuccess->$it")
-                onSucceed(it)
-            }.onFailure {
-                onFailure(exceptionToError(it))
-            }
-        }
-    } else {
-        onFailure(FailedBody(NETWORK_ERROR, context.getString(R.string.please_check_network)))
-    }
-}*/
 
 

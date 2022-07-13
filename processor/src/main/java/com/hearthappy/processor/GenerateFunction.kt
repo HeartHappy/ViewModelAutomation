@@ -4,24 +4,19 @@ import com.hearthappy.annotations.BindLiveData
 import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.annotations.BodyType
 import com.hearthappy.annotations.RequestType
-import com.hearthappy.processor.model.BaseConfigData
-import com.hearthappy.processor.model.GenerateViewModelData
-import com.hearthappy.processor.model.HeaderData
-import com.hearthappy.processor.model.RequestData
+import com.hearthappy.processor.common.KTOR_CLIENT_RESPONSE_PKG
+import com.hearthappy.processor.common.KTOR_REQUEST_STATE
+import com.hearthappy.processor.model.*
 import com.hearthappy.processor.tools.asKotlinClassName
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.TypeSpec
 
-internal fun generateFunctionByLiveData(
-    it: BindLiveData,
-    requestDataList: List<RequestData>,
-    viewModelParam: GenerateViewModelData,
-    classBuilder: TypeSpec.Builder
-) {
+internal fun generateFunctionByLiveData(it: BindLiveData, requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
     val function = FunSpec.builder(it.methodName).apply {
         generateMethodParametersSpec(requestDataList, viewModelParam)
-        generateMethodRequestScope(requestDataList, viewModelParam)
+        generateMethodRequestScope(requestDataList, viewModelParam,requiredImport)
         addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Error(it))},")
         addStatement("onSucceed = { body, _ ->${viewModelParam.priPropertyName}.postValue(Result.Success(body))},")
         addStatement("onThrowable = { ${viewModelParam.priPropertyName}.postValue(Result.Throwable(it))}")
@@ -31,16 +26,11 @@ internal fun generateFunctionByLiveData(
 }
 
 
-internal fun generateFunctionByStateFlow(
-    it: BindStateFlow,
-    requestDataList: List<RequestData>,
-    viewModelParam: GenerateViewModelData,
-    classBuilder: TypeSpec.Builder
-) {
+internal fun generateFunctionByStateFlow(it: BindStateFlow, requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
     val function = FunSpec.builder(it.methodName).apply {
         generateMethodParametersSpec(requestDataList, viewModelParam)
         addStatement("${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.LOADING")
-        generateMethodRequestScope(requestDataList, viewModelParam)
+        generateMethodRequestScope(requestDataList, viewModelParam,requiredImport)
         addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.FAILED(it) },")
         addStatement("onSucceed = { body,response-> ${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.SUCCEED(body,response) },")
         addStatement("onThrowable = { ${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.Throwable(it) }")
@@ -49,28 +39,19 @@ internal fun generateFunctionByStateFlow(
     classBuilder.addFunction(function.build())
 }
 
-private fun FunSpec.Builder.generateMethodRequestScope(
-    requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData
-) {
+private fun FunSpec.Builder.generateMethodRequestScope(requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData,requiredImport:MutableList<String>) {
+    //没有@Request注解的请求
     if (requestDataList.isEmpty()) {
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = io,")
     } else {
-        val findRequestData =
-            requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }
-        addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = {")
 
+        //拥有@Request注解请求
+        val findRequestData = requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }
+        addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = {")
         findRequestData?.apply {
-            generateRequestApi(
-                requestType,
-                requestBodyData.bodyType,
-                url,
-                headers,
-                fixedHeaders,
-                requestParameters,
-                requestBodyData.jsonParameterName,
-                requestBodyData.xwfParameters,
-                baseConfigData
-            )
+            generateRequestApi(requestType, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
+            requiredImport.add(requestType.name)
+            requiredImport.add(requestBodyData.bodyType.name)
         }
         addStatement("},")
     }
@@ -88,23 +69,13 @@ private fun FunSpec.Builder.generateMethodRequestScope(
  * @param requestBody Any?
  * @param appends Pair<String, Map<String, String>>?
  */
-private fun FunSpec.Builder.generateRequestApi(
-    requestType: RequestType,
-    bodyType: BodyType,
-    url: String,
-    headers: List<HeaderData>? = null,
-    fixedHeaders: List<String>?,
-    parameters: List<String>? = null,
-    requestBody: Any? = null,
-    appends: Pair<String, Map<String, String>>? = null,
-    baseConfigData: BaseConfigData?
-) {
+private fun FunSpec.Builder.generateRequestApi(requestType: RequestType, bodyType: BodyType, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?) {
 
     addStatement("sendKtorRequest<HttpResponse>(requestType=${requestType},bodyType=${bodyType},url=\"$url\"")
 
     //    if (headers?.isNotEmpty() == true) {
     addStatement(",headers={")
-    fixedHeaders?.forEach { addStatement("header(${it.asFixedHeader()})") }?:addStatement("header($Application_Json)")
+    fixedHeaders?.forEach { addStatement("header(${it.asFixedHeader()})") } ?: addStatement("header($Application_Json)")
     headers?.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
     addStatement("}") //    }
 
@@ -127,26 +98,16 @@ private fun FunSpec.Builder.generateRequestApi(
             addStatement("}")
         }
     }
-    baseConfigData?.let {
-        if (!it.enabledLog) {
-            addStatement(",enableLog=${it.enabledLog}")
-        } // TODO: 需要修改成动态代理 ，现在是静态代理
-        if (it.proxyIp.isNotEmpty() && it.proxyPort != -1) {
-            addStatement(",proxyIp=\"${it.proxyIp}\",proxyPort=${it.proxyPort}")
-        }
+    serviceConfigData?.let {
+        addStatement(",defaultConfig=app.${it.key}()")
     }
     addStatement(")")
 }
 
 
-private fun FunSpec.Builder.generateMethodParametersSpec(
-    requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData
-) { //没有@Request注解时，由开发者自定义请求
+private fun FunSpec.Builder.generateMethodParametersSpec(requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData) { //没有@Request注解时，由开发者自定义请求
     if (requestDataList.isEmpty()) {
-        addParameter(
-            "io",
-            LambdaTypeName.get(returnType = viewModelParam.responseBody).copy(suspending = true)
-        )
+        addParameter("io", LambdaTypeName.get(returnType = ClassName(KTOR_CLIENT_RESPONSE_PKG, "HttpResponse")).copy(suspending = true))
     } else { //有@Request注解时，自动生成响应请求
         requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }?.methodParameters?.forEach {
             addParameter(it.parameterName, it.parameterType.asKotlinClassName())

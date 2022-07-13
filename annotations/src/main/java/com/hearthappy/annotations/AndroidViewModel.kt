@@ -7,6 +7,5 @@ package com.hearthappy.annotations
  * ClassDescription :
  */
 
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.SOURCE)
-annotation class AndroidViewModel(val viewModelClassName: String="")
+@Target(AnnotationTarget.CLASS) @Retention(AnnotationRetention.SOURCE)
+annotation class AndroidViewModel(val viewModelClassName: String = "")

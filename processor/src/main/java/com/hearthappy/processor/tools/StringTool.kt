@@ -13,7 +13,7 @@ import com.squareup.kotlinpoet.ClassName
  * @param missingDelimiterValue String 原有字符
  * @return String
  */
-fun String.substringMiddle(
+internal fun String.substringMiddle(
     prefix: String,
     suffix: String,
     jumpOverCount: Int = 0,
@@ -32,51 +32,41 @@ fun String.substringMiddle(
 }
 
 
-fun String.asRest(prefix: String, suffix: String): String {
+internal fun String.asRest(prefix: String, suffix: String): String {
     val removeSuffix = this.replace(suffix, "")
     return removeSuffix.replace(prefix, "\$")
 }
 
-fun String.findRest(list: List<String>): List<String> {
+internal fun String.findRest(list: List<String>): List<String> {
     return (list subtract (this.split(Regex("[{-}]"))
         .filterNot { it.isEmpty() || it == "," })).toList()
 }
 
-fun String.removeWith(prefix: String, suffix: String): String {
+internal fun String.removeWith(prefix: String, suffix: String): String {
     val substringMiddle = substringMiddle(prefix, suffix)
     return this.replace(substringMiddle, "")
 }
 
 
 /**
- *
- * @receiver String getServerBaseUrl$annotations
- * @return String serverBaseUrl
- */
-fun String.getBaseUrlPropertyName(): String {
-    val removePrefix = this.removePrefix("get")
-    val replaceFirstChar = removePrefix.replaceFirstChar { it.lowercase() }
-    return replaceFirstChar.removeSuffix("\$annotations")
-}
-
-/**
  * 拆分包，将全类名分割成包和类
  * @param fullClassName String
  * @return Pair<String, String>
  */
-fun splitPackage(fullClassName: String): Pair<String, String> {
+internal fun splitPackage(fullClassName: String): Pair<String, String> {
     val lastIndexOf = fullClassName.lastIndexOf(".")
     val packageName = fullClassName.subSequence(0, lastIndexOf)
     val className = fullClassName.subSequence(lastIndexOf + 1, fullClassName.length)
     return Pair(packageName.toString(), className.toString())
 }
 
-fun String.asKotlinClassName(): ClassName {
+internal fun String.asKotlinClassName(): ClassName {
     val splitPackage = splitPackage(asKotlinPackage(this))
     return ClassName(splitPackage.first, splitPackage.second)
 }
 
-fun asKotlinPackage(javaPackage: String) = when (javaPackage) {
+
+internal fun asKotlinPackage(javaPackage: String) = when (javaPackage) {
     in "java.lang.Object" -> "kotlin.Any"
     in "java.lang.String" -> "kotlin.String"
     in "int", "Int" -> "kotlin.Int"

@@ -1,6 +1,5 @@
 package com.hearthappy.annotations
 
-import java.net.http.HttpResponse
 import kotlin.reflect.KClass
 
 /**

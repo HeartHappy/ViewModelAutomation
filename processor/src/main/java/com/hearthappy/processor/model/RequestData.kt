@@ -6,7 +6,7 @@ data class RequestData(
     val requestClass: String,
     val requestType: RequestType,
     val url: String,
-    val baseConfigData: BaseConfigData?,
+    val serviceConfigData: ServiceConfigData?,
     val headers: List<HeaderData>,
     val fixedHeaders: List<String>?,
     val methodParameters: List<ParameterData>,

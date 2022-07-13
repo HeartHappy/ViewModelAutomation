@@ -26,7 +26,7 @@ const val OTHER = 1
 //请求状态码
 const val NETWORK_ERROR = 100
 
-internal fun exceptionToError(e: Throwable) = if (e is HttpException) {             //HTTP 错误
+fun exceptionToError(e: Throwable) = if (e is HttpException) {             //HTTP 错误
     httpCode(e.response.status,e)
 } else if (e is JsonParseException || e is JSONException || e is ParseException) {
     FailedBody(OTHER, "解析错误") //均视为解析错误

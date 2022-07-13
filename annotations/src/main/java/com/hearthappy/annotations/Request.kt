@@ -5,7 +5,7 @@ package com.hearthappy.annotations
 annotation class Request(
     val type: RequestType = RequestType.GET,
     val urlString: String,
-    val baseUrlKey: String = "default"
+    val serviceKey: String = "defaultConfig"
 )
 
 

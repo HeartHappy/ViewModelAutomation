@@ -5,7 +5,7 @@ package com.hearthappy.annotations
 annotation class Body(val bodyType: BodyType = BodyType.JSON)
 
 enum class BodyType {
-    NONE, TEXT, JSON, HTML, XML, FORM_DATA,X_WWW_FormUrlEncoded,
+    NONE, TEXT, JSON, HTML, XML, FORM_DATA,FormUrlEncoded,
 }
 
 

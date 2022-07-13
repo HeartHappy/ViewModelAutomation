@@ -13,7 +13,7 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
 
-fun ktorClient(enableLog: Boolean = true, proxyIp: String, proxyPort: Int) = HttpClient(CIO) {
+fun ktorClient(defaultConfig: DefaultConfig) = HttpClient(CIO) {
     expectSuccess = false //false：禁用，验证ResponseCode处理的异常，只有200为成功，其他的都会作为异常处理
     engine {
         threadsCount = 4
@@ -28,8 +28,8 @@ fun ktorClient(enableLog: Boolean = true, proxyIp: String, proxyPort: Int) = Htt
             random = mySecureRandom
             addKeyStore(myKeyStore, myKeyStorePassword)
         }*/
-        proxy = if (proxyIp != EmptyString && proxyPort != -1) {
-            ProxyConfig(Proxy.Type.HTTP, InetSocketAddress(proxyIp, proxyPort))
+        proxy = if (defaultConfig.proxyIp != EmptyString && defaultConfig.proxyPort != -1) {
+            ProxyConfig(Proxy.Type.HTTP, InetSocketAddress(defaultConfig.proxyIp, defaultConfig.proxyPort))
         } else {
             Proxy.NO_PROXY
         }
@@ -70,7 +70,7 @@ fun ktorClient(enableLog: Boolean = true, proxyIp: String, proxyPort: Int) = Htt
          }
      }*/
 
-    if (enableLog) {
+    if (defaultConfig.enableLog) {
         install(Logging) {
             logger = Logger.DEFAULT
             level = LogLevel.BODY
