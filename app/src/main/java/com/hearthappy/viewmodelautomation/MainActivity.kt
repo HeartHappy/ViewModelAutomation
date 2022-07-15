@@ -12,13 +12,13 @@ import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.compiler.viewmodel.MainViewModel
 import com.hearthappy.ktorexpand.code.network.RequestState
 import com.hearthappy.ktorexpand.code.network.Result
+import com.hearthappy.ktorexpand.code.network.asFailedMessage
+import com.hearthappy.ktorexpand.code.network.asThrowableMessage
 import com.hearthappy.viewmodelautomation.databinding.ActivityMainBinding
 import com.hearthappy.viewmodelautomation.model.request.*
 import com.hearthappy.viewmodelautomation.model.response.ResHome
 import com.hearthappy.viewmodelautomation.model.response.ResLogin
 import com.hearthappy.viewmodelautomation.model.response.ResRegister
-import kotlin.system.measureTimeMillis
-import kotlin.time.measureTime
 
 
 /**
@@ -33,17 +33,14 @@ import kotlin.time.measureTime
 @AndroidViewModel
 @BindStateFlow(methodName = "login", requestClass = ReLogin::class, responseClass = ResLogin::class)
 @BindStateFlow(methodName = "home", requestClass = ReHome::class, responseClass = ResHome::class)
-@BindStateFlow(
-    methodName = "register", requestClass = ReRegister::class, responseClass = ResRegister::class
-) @BindLiveData(
-    methodName = "deleteUser", requestClass = ReDelete::class, responseClass = String::class
-) @BindLiveData(
-    methodName = "userInfo", requestClass = ReUserInfo::class, responseClass = String::class
-) @BindStateFlow("getAppOption", ReAppOption::class, String::class) class MainActivity :
-    AppCompatActivity() {
+@BindStateFlow(methodName = "register", requestClass = ReRegister::class, responseClass = ResRegister::class)
+@BindLiveData(methodName = "deleteUser", requestClass = ReDelete::class, responseClass = String::class)
+@BindLiveData(methodName = "userInfo", requestClass = ReUserInfo::class, responseClass = String::class)
+@BindStateFlow("getAppOption", ReAppOption::class, String::class)
+class MainActivity: AppCompatActivity() {
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var viewBinding: ActivityMainBinding
-    var  currentTimeMillis=0L
+    var currentTimeMillis = 0L
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewBinding = ActivityMainBinding.inflate(layoutInflater)
@@ -61,9 +58,11 @@ import kotlin.time.measureTime
                         Log.d(TAG, "onCreate SUCCEED: ${it.body}")
                     }
                     is RequestState.FAILED -> {
+                        viewBinding.tvResult.text = it.asFailedMessage()
                         Log.d(TAG, "onCreate FAILED: ${it.failedBody}")
                     }
                     is RequestState.Throwable -> {
+                        viewBinding.tvResult.text = it.asThrowableMessage()
                         Log.d(TAG, "onCreate Throwable: ${it.throwable}")
                     }
                     else -> {
@@ -91,7 +90,6 @@ import kotlin.time.measureTime
             }
         }
 
-
         viewModel.userInfoLiveData.observe(this) {
             when (it) {
                 is Result.Success -> {
@@ -115,7 +113,7 @@ import kotlin.time.measureTime
 
     fun btnRequest(view: View) {
         Log.d(TAG, "btnRequest: ")
-         currentTimeMillis= System.currentTimeMillis()
-        viewModel.login(ReLogin("user_3", "24cff18577e8dc8c6fdf53a6621a0b4d"))
+        currentTimeMillis = System.currentTimeMillis()
+        viewModel.login(ReLogin("user_5", "24cff18577e8dc8c6fdf53a6621a0b4d"))
     }
 }

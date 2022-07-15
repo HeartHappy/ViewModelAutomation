@@ -1,10 +1,9 @@
 package com.hearthappy.ktorexpand.code.network
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.google.gson.GsonBuilder
+import io.ktor.client.call.*
 import io.ktor.client.statement.*
 import io.ktor.http.parsing.*
-import io.ktor.serialization.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -39,21 +38,16 @@ suspend inline fun <reified R> resultHandler(
         result.exceptionOrNull()?.let(onThrowable) ?: let {
             getOrNull()?.let { response ->
                 if (this.isSuccess && response.status.value in succeedCode) {
-                    val readText = response.bodyAsText()
-                    println("HttpClient---> Result onSucceed:${response.status.value},$readText")
+                    println("HttpClient---> Result onSucceed:${response.status.value},Class:${R::class.java}")
                     when {
-                        isJson<R>(readText) -> {
-                            println("HttpClient---> Result isJson:${R::class.java},${R::class.java.name}")
-                            val fromJson = jacksonObjectMapper().readValue<R>(readText)
-                            withMainCoroutine { onSucceed(fromJson, response) }
-
-                        }
-                        isString<R>(readText) -> {
-                            withMainCoroutine { onSucceed(readText as R, response) }
+                        isString<R>() -> {
+                            val bodyString = response.bodyAsText()
+                            withMainCoroutine { onSucceed(bodyString as R, response) }
                         }
                         else -> {
-                            println("HttpClient---> Parsing error, response text: $readText, does not match response type: ${R::class.java}")
-                            withMainCoroutine { onThrowable(JsonConvertException("Parsing error, response text: $readText, does not match response type: ${R::class.java}")) }
+                            //返回转换后对象类型
+                            val body = response.body<R>()
+                            withMainCoroutine { onSucceed(body, response) }
                         }
                     }
                 } else {
@@ -70,9 +64,7 @@ suspend fun withMainCoroutine(block: () -> Unit) {
     withContext(Dispatchers.Main) { block() }
 }
 
-inline fun <reified R> isString(readText: String) = !isJsonString(readText) && rIsString<R>()
-
-inline fun <reified R> isJson(readText: String) = isJsonString(readText) && !rIsString<R>()
+inline fun <reified R> isString() = rIsString<R>()
 
 inline fun <reified R> rIsString() = R::class.java.name == String::class.java.name
 
@@ -82,9 +74,12 @@ data class FailedBody(val statusCode: Int, val text: String?)
 data class ErrorMessage(val error: String)
 
 
-fun RequestState.FAILED.asFailedMessage(): ErrorMessage? {
+fun RequestState.FAILED.asFailedMessage(): String? {
     return try {
-        failedBody.text?.let { jacksonObjectMapper().readValue<ErrorMessage>(it) }
+
+        failedBody.text?.let {
+            GsonBuilder().create().fromJson(failedBody.text, ErrorMessage::class.java).error
+        }
     } catch (e: Throwable) {
         throw ParseException("Parse exception, text: ${failedBody.text}, does not match type ErrorMassage")
     }

@@ -1,26 +1,27 @@
 package com.hearthappy.ktorexpand.code.network
 
-import android.annotation.SuppressLint
 import io.ktor.client.*
 import io.ktor.client.engine.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
-import io.ktor.serialization.jackson.*
+import io.ktor.serialization.gson.*
 import java.net.InetSocketAddress
 import java.net.Proxy
-import java.security.cert.X509Certificate
-import javax.net.ssl.X509TrustManager
 
 
-fun ktorClient(defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = HttpClient(CIO) {
+fun ktorClient(defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = HttpClient(OkHttp) {
     expectSuccess = false //false：禁用，验证ResponseCode处理的异常，只有200为成功，其他的都会作为异常处理
     engine {
         threadsCount = 4
-        pipelining = true
+        pipelining = false
 
-        //https认证
+        if (defaultConfig.proxyIp != EmptyString && defaultConfig.proxyPort != -1) {
+            proxy = ProxyConfig(
+                Proxy.Type.HTTP, InetSocketAddress(defaultConfig.proxyIp, defaultConfig.proxyPort)
+            )
+        } //https认证
         /*https {
             // this: TLSConfigBuilder
             serverName = "api.ktor.io"
@@ -29,14 +30,9 @@ fun ktorClient(defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = Http
             random = mySecureRandom
             addKeyStore(myKeyStore, myKeyStorePassword)
         }*/
-        if (defaultConfig.proxyIp != EmptyString && defaultConfig.proxyPort != -1) {
-            proxy = ProxyConfig(
-                Proxy.Type.HTTP, InetSocketAddress(defaultConfig.proxyIp, defaultConfig.proxyPort)
-            )
-        }
 
         //忽略https认证，可以使用https进行请求
-        https {
+        /*https {
             trustManager = @SuppressLint("CustomX509TrustManager") object : X509TrustManager {
                 @SuppressLint("TrustAllX509TrustManager")
                 override fun checkClientTrusted(p0: Array<out X509Certificate>?, p1: String?) {
@@ -48,14 +44,14 @@ fun ktorClient(defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = Http
 
                 override fun getAcceptedIssuers(): Array<X509Certificate?> = arrayOfNulls(0)
             }
-        }
+        }*/
     }
 
 
 
 
-    install(ContentNegotiation) {
-        jackson()
+    install(ContentNegotiation){
+        gson()
     }
 
     install(HttpTimeout) {

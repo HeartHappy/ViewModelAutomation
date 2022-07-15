@@ -1,34 +1,25 @@
 package com.hearthappy.ktorexpand.code.network
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.google.gson.Gson
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
-import kotlinx.coroutines.coroutineScope
-
-data class ReLogin(val username: String, val password: String)
 
 
-suspend fun main() {
-    runCatching {
-        coroutineScope {
-            val submitForm =
-                ktorClient().submitForm("http://192.168.51.23:50000/c-api/user-login-pwd",
-                    Parameters.build {
-                        append("username", "user_3")
-                        append("password", "24cff18577e8dc8c6fdf53a6621a0b4d")
-                    })
-            println("result:$submitForm")
-        }
-    }
-}
-
-fun HttpRequestBuilder.jsonHeader() {
-    header(HttpHeaders.ContentType, ContentType.Application.Json)
-}
+//fun main() = runBlocking {
+//    val measureTimeMillis = measureTimeMillis {
+//        val submitForm = ktorClient().submitForm("http://192.168.51.23:50000/c-api/user-login-pwd",
+//            Parameters.build {
+//                append("username", "user_3")
+//                append("password", "24cff18577e8dc8c6fdf53a6621a0b4d")
+//            })
+//        println("result:${submitForm.bodyAsText()}")
+//    }
+//    println("end:${measureTimeMillis}")
+//}
 
 suspend inline fun HttpClient.getRequest(
     url: String,
@@ -96,7 +87,9 @@ suspend inline fun sendKtorRequest(
                 NONE -> it.getRequest(url, headers) { parameters() }
                 TEXT -> it.getRequest(
                     url, headers
-                ) { setBody(jacksonObjectMapper().writeValueAsString(requestBody)) }
+                ) { //                    setBody(jacksonObjectMapper().writeValueAsString(requestBody))
+                    setBody(Gson().toJson(requestBody))
+                }
                 JSON -> it.getRequest(url, headers) { setBody(requestBody) }
                 FORM_DATA -> it.submitForm(
                     url = url, Parameters.build(appends), encodeInQuery = true
@@ -111,9 +104,10 @@ suspend inline fun sendKtorRequest(
             when (bodyType) {
                 NONE -> it.postRequest(url, headers) { parameters() }
                 TEXT -> it.postRequest(
-                    url,
-                    headers
-                ) { setBody(jacksonObjectMapper().writeValueAsString(requestBody)) }
+                    url, headers
+                ) { //                    setBody(jacksonObjectMapper().writeValueAsString(requestBody))
+                    setBody(Gson().toJson(requestBody))
+                }
                 JSON -> it.postRequest(url, headers) { setBody(requestBody) }
                 FORM_DATA -> it.submitForm(url = url, Parameters.build(appends)) { headers() }
                 FormUrlEncoded -> it.postRequest(url, headers) {
@@ -126,9 +120,10 @@ suspend inline fun sendKtorRequest(
             when (bodyType) {
                 NONE -> it.patchRequest(url, headers) { parameters() }
                 TEXT -> it.patchRequest(
-                    url,
-                    headers
-                ) { setBody(jacksonObjectMapper().writeValueAsString(requestBody)) }
+                    url, headers
+                ) { //                    setBody(jacksonObjectMapper().writeValueAsString(requestBody))
+                    setBody(Gson().toJson(requestBody))
+                }
                 JSON -> it.patchRequest(url, headers) { setBody(requestBody) }
                 FORM_DATA -> it.submitForm(url = url, Parameters.build(appends)) { headers() }
                 FormUrlEncoded -> it.patchRequest(url, headers) {
@@ -140,8 +135,10 @@ suspend inline fun sendKtorRequest(
         DELETE -> {
             when (bodyType) {
                 NONE -> it.deleteRequest(url, headers) { parameters() }
-                TEXT -> it.deleteRequest(url, headers) {
-                    setBody(jacksonObjectMapper().writeValueAsString(requestBody))
+                TEXT -> it.deleteRequest(
+                    url, headers
+                ) { //                    setBody(jacksonObjectMapper().writeValueAsString(requestBody))
+                    setBody(Gson().toJson(requestBody))
                 }
                 JSON -> it.deleteRequest(url, headers) { setBody(requestBody) }
                 FORM_DATA -> it.submitForm(url = url, Parameters.build(appends)) { headers() }
