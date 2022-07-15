@@ -1,33 +1,88 @@
 package com.hearthappy.processor
 
+import com.hearthappy.annotations.AndroidViewModel
+import com.hearthappy.annotations.BindLiveData
+import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.processor.common.*
 import com.hearthappy.processor.model.ServiceConfigData
-import com.squareup.kotlinpoet.FileSpec
-import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.*
 import java.io.File
+import javax.annotation.processing.RoundEnvironment
+import javax.lang.model.element.Element
 
-// TODO:优化所需导入的响应类，根据响应类型的包名进行遍历导包
-internal fun ViewModelProcessor.generateFileAndWrite(viewModelClassName: String, classBuilder: TypeSpec.Builder, generatedSource: String, serviceConfigList: List<ServiceConfigData>, collectRequiredImport: List<String>) { //创建文件
+internal fun ViewModelProcessor.generateAndroidViewModelFile(roundEnv: RoundEnvironment, androidViewModelElements: MutableSet<out Element>, generatedSource: String, serviceConfigList: List<ServiceConfigData>): Boolean {
+    if (androidViewModelElements.isEmpty()) {
+        return sendErrorMsg("The AndroidViewModel annotation was not found. Please declare AndroidViewModel annotations for Activity or Fragment")
+    } //直接获取并封装所有请求
 
-    val requiredImport = getFinallyRequiredImport(collectRequiredImport)
-    //创建文件,导包并取别名import xxx.requestScopeX as RequestScope
+    val requestDataList = getRequestDataList(roundEnv, serviceConfigList)
+
+    androidViewModelElements.forEach { avmElement ->
+        val androidViewModelAnt = avmElement.getAnnotation(AndroidViewModel::class.java)
+        val bindLiveDataAnt = avmElement.getAnnotationsByType(BindLiveData::class.java)
+        val bindStateFlowAnt = avmElement.getAnnotationsByType(BindStateFlow::class.java)
+        val viewModelClassName = androidViewModelAnt.viewModelClassName.ifEmpty {
+            extractName(avmElement.simpleName.toString()).plus("ViewModel")
+        }
+
+        //当前ViewModel所需导入的包名
+        val collectRequiredImport = mutableListOf<String>()
+
+        sendNoteMsg("@AndroidViewModel className:${viewModelClassName},@BindLiveData count:${bindLiveDataAnt.size},@BindStateFlow count:${bindStateFlowAnt.size}") //创建类
+//        val classBuilder = builderViewModelClassSpec(viewModelClassName)
+        val generateClass = generateClass(viewModelClassName, listOf(ParameterSpec("app", application, KModifier.PRIVATE)), superClassName = androidViewModel)
+
+
+        //通过BindLiveData创建属性、方法
+        generatePropertyAndMethodByLiveData(generateClass, requestDataList, bindLiveDataAnt) { bld, requestDataList, viewModelParam ->
+            sendNoteMsg("==================> Create function: ${bld.methodName}") //通过类型别名创建函数参数
+            generateFunctionByLiveData(bld, requestDataList, viewModelParam, generateClass, collectRequiredImport)
+        }
+
+        //通过BindStateFlow创建属性、方法
+        generatePropertyAndMethodByStateFlow(generateClass, requestDataList, bindStateFlowAnt) { bsf, requestDataList, viewModelParam ->
+            sendNoteMsg("==================> Create function: ${bsf.methodName}") //创建公开属性
+            generateFunctionByStateFlow(bsf, requestDataList, viewModelParam, generateClass, collectRequiredImport)
+        }
+
+        //写入文件
+        generateFileAndWrite(viewModelClassName, generateClass, generatedSource, serviceConfigList, collectRequiredImport)
+    }
+    return true
+}
+
+
+private fun builderViewModelClassSpec(viewModelClassName: String): TypeSpec.Builder {
+    return TypeSpec.classBuilder(viewModelClassName).primaryConstructor(FunSpec.constructorBuilder().addParameter(ParameterSpec("app", application)).build()).addProperty(PropertySpec.builder("app", application).initializer("app").build()).addSuperclassConstructorParameter("app").superclass(androidViewModel)
+}
+
+private fun extractName(className: String) = when {
+    className.contains("Activity") -> className.substringBefore("Activity")
+    className.contains("Fragment") -> className.substringBefore("Fragment")
+    else -> className
+}
+
+internal fun ViewModelProcessor.generateFileAndWrite(viewModelClassName: String, generateClass: TypeSpec.Builder, generatedSource: String, serviceConfigList: List<ServiceConfigData>, collectRequiredImport: List<String>) { //创建文件
+
+    val requiredImport = getFinallyRequiredImport(collectRequiredImport) //创建文件,导包并取别名import xxx.requestScopeX as RequestScope
     val file = FileSpec.builder(GENERATE_VIEWMODEL_PKG, viewModelClassName).apply {
 
         //                .addAliasedImport(requestScopeX, "RequestScope") //导包取别名
         //                .addTypeAlias(typeAlias).build() //文件内添加类型别名
-
         if (requiredImport.isNotEmpty()) {
             addImport(KTOR_NETWORK_PKG, requiredImport)
             addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER, KTOR_HEADER)
-            addImport(KTOR_CLIENT_RESPONSE_PKG, HTTP_RESPONSE)
+//            addImport(KTOR_CLIENT_RESPONSE_PKG, HTTP_RESPONSE)
             addImport(KTOR_HTTP_PKG, KTOR_HTTP_RESPONSE, KTOR_CONTENT_TYPE)
-        }
 
-        if (serviceConfigList.isNotEmpty() && requiredImport.isNotEmpty()) {
-            val map = serviceConfigList.map { it.key }
-            addImport(GENERATE_CONFIG_PKG, map)
+            if (serviceConfigList.isNotEmpty()) {
+                val map = serviceConfigList.map { it.key }
+                addImport(GENERATE_CONFIG_PKG, map)
+            }
         }
-    }.addType(classBuilder.build()).build()
+        addType(generateClass.build())
+    }.build()
+
     file.writeTo(File(generatedSource))
     sendNoteMsg("==================> Create a $viewModelClassName file and write the class to the file")
 }
@@ -38,7 +93,9 @@ internal fun ViewModelProcessor.generateFileAndWrite(viewModelClassName: String,
  * @return List<String>
  */
 private fun getFinallyRequiredImport(collectRequiredImport: List<String>): List<String> {
-    return collectRequiredImport.isNotEmpty().takeIf { it }?.run { collectRequiredImport.plus(KTOR_REQUEST_SCOPE).plus(KTOR_REQUEST).toSet().toList() } ?: run { collectRequiredImport }
+    return collectRequiredImport.isNotEmpty().takeIf { it }?.run {
+        collectRequiredImport.plus(KTOR_REQUEST_SCOPE).plus(KTOR_REQUEST).toSet().toList()
+    } ?: run { collectRequiredImport }
 }
 
 

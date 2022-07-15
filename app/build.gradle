@@ -2,6 +2,8 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-kapt'
+    id 'kotlin-parcelize'
+//    id 'kotlinx-serialization' //使用io.ktor:ktor-serialization-kotlinx-json:$ktorVersion 库时所需序列化插件
 }
 
 android {
@@ -23,6 +25,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    buildFeatures{
+        viewBinding true
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -31,13 +36,13 @@ android {
         jvmTarget = '1.8'
     }
 }
-def ktorVersion = "1.6.0"
-def lifecycleVersion = "2.3.0"
+def ktorVersion = "2.0.3"
+def lifecycleVersion = "2.3.1"
 dependencies {
 
 
     implementation 'androidx.core:core-ktx:1.7.0'
-    implementation 'androidx.appcompat:appcompat:1.3.0'
+    implementation 'androidx.appcompat:appcompat:1.4.0'
     implementation 'com.google.android.material:material:1.4.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     testImplementation 'junit:junit:4.13.2'
@@ -49,11 +54,11 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:${lifecycleVersion}"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:${lifecycleVersion}"
 
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2"
 
+    //ktor所需
     implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("com.google.code.gson:gson:2.8.6")
-
+//    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
 
 
     compileOnly project(path: ':annotations')

@@ -6,17 +6,20 @@ import com.hearthappy.annotations.BodyType
 import com.hearthappy.annotations.RequestType
 import com.hearthappy.processor.common.KTOR_CLIENT_RESPONSE_PKG
 import com.hearthappy.processor.common.KTOR_REQUEST_STATE
-import com.hearthappy.processor.model.*
+import com.hearthappy.processor.model.HeaderData
+import com.hearthappy.processor.model.RequestData
+import com.hearthappy.processor.model.ServiceConfigData
+import com.hearthappy.processor.model.ViewModelData
 import com.hearthappy.processor.tools.asKotlinClassName
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.TypeSpec
 
-internal fun generateFunctionByLiveData(it: BindLiveData, requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
+internal fun generateFunctionByLiveData(it: BindLiveData, requestDataList: List<RequestData>, viewModelParam: ViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
     val function = FunSpec.builder(it.methodName).apply {
         generateMethodParametersSpec(requestDataList, viewModelParam)
-        generateMethodRequestScope(requestDataList, viewModelParam,requiredImport)
+        generateMethodRequestScope(requestDataList, viewModelParam, requiredImport)
         addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Error(it))},")
         addStatement("onSucceed = { body, _ ->${viewModelParam.priPropertyName}.postValue(Result.Success(body))},")
         addStatement("onThrowable = { ${viewModelParam.priPropertyName}.postValue(Result.Throwable(it))}")
@@ -26,11 +29,11 @@ internal fun generateFunctionByLiveData(it: BindLiveData, requestDataList: List<
 }
 
 
-internal fun generateFunctionByStateFlow(it: BindStateFlow, requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
+internal fun generateFunctionByStateFlow(it: BindStateFlow, requestDataList: List<RequestData>, viewModelParam: ViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
     val function = FunSpec.builder(it.methodName).apply {
         generateMethodParametersSpec(requestDataList, viewModelParam)
         addStatement("${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.LOADING")
-        generateMethodRequestScope(requestDataList, viewModelParam,requiredImport)
+        generateMethodRequestScope(requestDataList, viewModelParam, requiredImport)
         addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.FAILED(it) },")
         addStatement("onSucceed = { body,response-> ${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.SUCCEED(body,response) },")
         addStatement("onThrowable = { ${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.Throwable(it) }")
@@ -39,8 +42,7 @@ internal fun generateFunctionByStateFlow(it: BindStateFlow, requestDataList: Lis
     classBuilder.addFunction(function.build())
 }
 
-private fun FunSpec.Builder.generateMethodRequestScope(requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData,requiredImport:MutableList<String>) {
-    //没有@Request注解的请求
+private fun FunSpec.Builder.generateMethodRequestScope(requestDataList: List<RequestData>, viewModelParam: ViewModelData, requiredImport: MutableList<String>) { //没有@Request注解的请求
     if (requestDataList.isEmpty()) {
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = io,")
     } else {
@@ -49,12 +51,16 @@ private fun FunSpec.Builder.generateMethodRequestScope(requestDataList: List<Req
         val findRequestData = requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = {")
         findRequestData?.apply {
+            addRequiredImport(requiredImport)
             generateRequestApi(requestType, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
-            requiredImport.add(requestType.name)
-            requiredImport.add(requestBodyData.bodyType.name)
         }
         addStatement("},")
     }
+}
+
+private fun RequestData.addRequiredImport(requiredImport: MutableList<String>) {
+    requiredImport.add(requestType.name)
+    requiredImport.add(requestBodyData.bodyType.name)
 }
 
 
@@ -71,11 +77,15 @@ private fun FunSpec.Builder.generateMethodRequestScope(requestDataList: List<Req
  */
 private fun FunSpec.Builder.generateRequestApi(requestType: RequestType, bodyType: BodyType, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?) {
 
-    addStatement("sendKtorRequest<HttpResponse>(requestType=${requestType},bodyType=${bodyType},url=\"$url\"")
+    addStatement("sendKtorRequest(")
+    if (requestBody != RequestType.GET) addStatement("requestType=${requestType}")
+    if (bodyType != BodyType.NONE) addStatement(",bodyType=${bodyType}")
+
+    addStatement(",url=\"$url\"")
 
     //    if (headers?.isNotEmpty() == true) {
     addStatement(",headers={")
-    fixedHeaders?.forEach { addStatement("header(${it.asFixedHeader()})") } ?: addStatement("header($Application_Json)")
+    fixedHeaders?.forEach { addStatement("header(${it.asFixedHeader()})") }
     headers?.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
     addStatement("}") //    }
 
@@ -105,7 +115,7 @@ private fun FunSpec.Builder.generateRequestApi(requestType: RequestType, bodyTyp
 }
 
 
-private fun FunSpec.Builder.generateMethodParametersSpec(requestDataList: List<RequestData>, viewModelParam: GenerateViewModelData) { //没有@Request注解时，由开发者自定义请求
+private fun FunSpec.Builder.generateMethodParametersSpec(requestDataList: List<RequestData>, viewModelParam: ViewModelData) { //没有@Request注解时，由开发者自定义请求
     if (requestDataList.isEmpty()) {
         addParameter("io", LambdaTypeName.get(returnType = ClassName(KTOR_CLIENT_RESPONSE_PKG, "HttpResponse")).copy(suspending = true))
     } else { //有@Request注解时，自动生成响应请求

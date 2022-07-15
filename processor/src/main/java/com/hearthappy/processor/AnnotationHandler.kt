@@ -91,6 +91,7 @@ private fun ViewModelProcessor.getMethodParameters(requestElement: Element, body
         BodyType.XML -> {
         }
         BodyType.FORM_DATA -> {
+            parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
         }
         else -> {
         }
@@ -305,7 +306,7 @@ private fun getCurrentBodyQueryMap(currentBodyElement: Element, queryElements: M
  */
 private fun ViewModelProcessor.createRequestBodyData(bodyType: BodyType, currentBodyElement: Element, queryElements: MutableSet<out Element>): RequestBodyData {
     val currentBodyParameterName = getCurrentBodyParameterName(currentBodyElement)
-    return if (bodyType == BodyType.FormUrlEncoded) { //创建XWF数据类型所需的参数@Query列表
+    return if (bodyType == BodyType.FormUrlEncoded || bodyType == BodyType.FORM_DATA) { //创建XWF数据类型所需的参数@Query列表
         val currentBodyQueryMap = getCurrentBodyQueryMap(currentBodyElement, queryElements)
         if (currentBodyQueryMap.isEmpty()) sendErrorMsg("The request class is ${currentBodyElement.asType()}, the specified BodyType is FormUrlEncoded, but the Query annotation is not declared, resulting in an error")
         RequestBodyData(bodyType, xwfParameters = currentBodyParameterName?.run { Pair(this, currentBodyQueryMap) })
