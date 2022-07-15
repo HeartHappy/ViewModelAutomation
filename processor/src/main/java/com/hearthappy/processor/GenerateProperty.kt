@@ -3,104 +3,85 @@ package com.hearthappy.processor
 import com.hearthappy.annotations.BindLiveData
 import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.processor.common.*
-import com.hearthappy.processor.common.mutableStateFlow
-import com.hearthappy.processor.common.requestState
-import com.hearthappy.processor.model.GenerateViewModelData
+import com.hearthappy.processor.model.ViewModelData
 import com.hearthappy.processor.model.RequestData
 import com.hearthappy.processor.tools.asKotlinPackage
 import com.hearthappy.processor.tools.splitPackage
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.TypeSpec
 import javax.lang.model.type.MirroredTypeException
 import kotlin.reflect.KClass
 
-internal fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(classBuilder: TypeSpec.Builder, requestDataList: List<RequestData>, bindStateFlow: Array<BindStateFlow>?, viewModelClassName: String, finishBlock: (BindStateFlow, List<RequestData>, GenerateViewModelData) -> Unit) {
+internal fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(
+    classBuilder: TypeSpec.Builder,
+    requestDataList: List<RequestData>,
+    bindStateFlow: Array<BindStateFlow>?,
+    finishBlock: (BindStateFlow, List<RequestData>, ViewModelData) -> Unit
+) {
     bindStateFlow?.onEach {
-        val viewModelParam = it.getViewModelParam(viewModelClassName)
+        val viewModelParam = it.getViewModelParam()
 
-        sendNoteMsg("==================> Create a private StateFlow")
-        generatePrivateProperty(
-            propertyName = viewModelParam.priPropertyName,
-            propertyType = mutableStateFlow.parameterizedBy(
+        sendNoteMsg("==================> Create a private ${viewModelParam.priPropertyName}")
+
+        val generateMutableStateFlow = generateDelegatePropertySpec(
+            viewModelParam.priPropertyName, mutableStateFlow.parameterizedBy(
                 requestState.parameterizedBy(viewModelParam.responseBody)
-            ),
-            delegateValue = "${MUTABLE_STATE_FLOW}(${KTOR_REQUEST_STATE}.DEFAULT)",
-            addToClass = classBuilder,
-            KModifier.PRIVATE
+            ), "${MUTABLE_STATE_FLOW}(${KTOR_REQUEST_STATE}.DEFAULT)", KModifier.PRIVATE
         )
 
-        sendNoteMsg("==================> Create a public StateFlow") //创建公开属性
-        generatePublicProperty(
-            propertyName = viewModelParam.pubPropertyName,
-            propertyType = stateFlow.parameterizedBy(
+        classBuilder.addProperty(generateMutableStateFlow)
+
+        sendNoteMsg("==================> Create a public ${viewModelParam.pubPropertyName}") //创建公开属性
+        val generateStateFlow = generatePropertySpec(
+            viewModelParam.pubPropertyName, stateFlow.parameterizedBy(
                 requestState.parameterizedBy(viewModelParam.responseBody)
-            ),
-            initValue = viewModelParam.priPropertyName,
-            addToClass = classBuilder
+            ), viewModelParam.priPropertyName
         )
 
-        finishBlock(it,requestDataList,viewModelParam)
-    }
-}
+        classBuilder.addProperty(generateStateFlow)
 
-
-internal fun ViewModelProcessor.generatePropertyAndMethodByLiveData(classBuilder: TypeSpec.Builder, requestDataList: List<RequestData>, bindLiveData: Array<BindLiveData>?, viewModelClassName: String, finishBlock: (BindLiveData, List<RequestData>, GenerateViewModelData) -> Unit) {
-    bindLiveData?.onEach {
-        val viewModelParam = it.getViewModelParam(viewModelClassName)
-        sendNoteMsg("==================> Create private LiveData") //创建私有属性
-        generatePrivateProperty(
-            propertyName = viewModelParam.priPropertyName,
-            propertyType = mutableLiveData.parameterizedBy(
-                result.parameterizedBy(viewModelParam.responseBody)
-            ),
-            delegateValue = "${MUTABLE_LIVEDATA}()",
-            addToClass = classBuilder,
-            KModifier.PRIVATE
-        )
-
-        sendNoteMsg("==================> Create public LiveData") //创建公开属性
-        generatePublicProperty(
-            propertyName = viewModelParam.pubPropertyName,
-            propertyType = liveData.parameterizedBy(result.parameterizedBy(viewModelParam.responseBody)),
-            initValue = viewModelParam.priPropertyName,
-            addToClass = classBuilder
-        )
         finishBlock(it, requestDataList, viewModelParam)
     }
 }
 
-private fun generatePublicProperty(
-    propertyName: String,
-    propertyType: ParameterizedTypeName,
-    initValue: String,
-    addToClass: TypeSpec.Builder,
-    vararg modifier: KModifier,
+
+internal fun ViewModelProcessor.generatePropertyAndMethodByLiveData(
+    classBuilder: TypeSpec.Builder,
+    requestDataList: List<RequestData>,
+    bindLiveData: Array<BindLiveData>?,
+    finishBlock: (BindLiveData, List<RequestData>, ViewModelData) -> Unit
 ) {
-    addToClass.addProperty(
-        PropertySpec.builder(propertyName, propertyType).initializer(initValue)
-            .addModifiers(*modifier).build()
-    )
+    bindLiveData?.onEach {
+        val viewModelParam = it.getViewModelParam()
+
+        sendNoteMsg("==================> Create a private ${viewModelParam.priPropertyName}") //创建私有属性
+        val generateMutableLiveData = generateDelegatePropertySpec(
+            viewModelParam.priPropertyName, mutableLiveData.parameterizedBy(
+                result.parameterizedBy(viewModelParam.responseBody)
+            ), "${MUTABLE_LIVEDATA}()", KModifier.PRIVATE
+        )
+        classBuilder.addProperty(generateMutableLiveData)
+
+        sendNoteMsg("==================> Create a public ${viewModelParam.pubPropertyName}") //创建公开属性
+        val generateLiveData = generatePropertySpec(
+            viewModelParam.pubPropertyName,
+            liveData.parameterizedBy(result.parameterizedBy(viewModelParam.responseBody)),
+            viewModelParam.priPropertyName
+        )
+        classBuilder.addProperty(generateLiveData)
+
+        finishBlock(it, requestDataList, viewModelParam)
+    }
 }
 
-internal fun generatePrivateProperty(
-    propertyName: String,
-    propertyType: ParameterizedTypeName,
-    delegateValue: String,
-    addToClass: TypeSpec.Builder,
-    vararg modifier: KModifier,
-) {
-
-    addToClass.addProperty(
-        PropertySpec.builder(propertyName, propertyType).delegate("lazy{$delegateValue}")
-            .addModifiers(*modifier).build()
-    )
-}
 
 /**
  * 通过Annotation获取生成ViewModel所需参数
  * @return GenerateViewModelData
  */
-private fun Annotation.getViewModelParam(viewModelClassName: String): GenerateViewModelData {
+private fun Annotation.getViewModelParam(): ViewModelData {
     var requestClass = ""
     var responseClass = ""
     var pubPropertyName = ""
@@ -113,8 +94,7 @@ private fun Annotation.getViewModelParam(viewModelClassName: String): GenerateVi
         is BindStateFlow -> {
             requestClass = getAnnotationValue { it.requestClass }.toString()
             responseClass = getAnnotationValue { bld -> bld.responseClass }.toString()
-            pubPropertyName =
-                stateFlowName.ifEmpty { methodName.plus(STATE_FLOW) }
+            pubPropertyName = stateFlowName.ifEmpty { methodName.plus(STATE_FLOW) }
         }
     }
 
@@ -126,7 +106,7 @@ private fun Annotation.getViewModelParam(viewModelClassName: String): GenerateVi
 
     val responsePackage = splitPackage(asKotlinPackage(responseClass))
     val responseBody = ClassName(responsePackage.first, responsePackage.second)
-    return GenerateViewModelData(viewModelClassName,requestBody, responseBody, pubPropertyName, priPropertyName)
+    return ViewModelData(requestBody, responseBody, pubPropertyName, priPropertyName)
 }
 
 

@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">ViewModelExpandSamples</string>
+    <string name="app_name">ViewModelAutomationSamples</string>
+    <string name="welcome_to_viewmodelautomation">Welcome to ViewModelAutomation!</string>
+    <string name="send_request">send Request</string>
 </resources>

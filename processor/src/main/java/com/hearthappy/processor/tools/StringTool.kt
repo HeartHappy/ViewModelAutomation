@@ -66,6 +66,10 @@ internal fun String.asKotlinClassName(): ClassName {
 }
 
 
+internal fun String.transConfigFunName() = plus("Config()")
+
+internal fun String.transConfigPropertyName() = plus("Config")
+
 internal fun asKotlinPackage(javaPackage: String) = when (javaPackage) {
     in "java.lang.Object" -> "kotlin.Any"
     in "java.lang.String" -> "kotlin.String"

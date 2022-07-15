@@ -11,7 +11,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:name=".MyApplication"
-        android:theme="@style/Theme.ViewModelExpandSamples"
+        android:theme="@style/Theme.ViewModelAutomationSamples"
         android:usesCleartextTraffic="false">
         <activity
             android:name=".TestActivity"

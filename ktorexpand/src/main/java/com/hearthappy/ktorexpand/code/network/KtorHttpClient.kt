@@ -28,10 +28,10 @@ fun ktorClient(defaultConfig: DefaultConfig) = HttpClient(CIO) {
             random = mySecureRandom
             addKeyStore(myKeyStore, myKeyStorePassword)
         }*/
-        proxy = if (defaultConfig.proxyIp != EmptyString && defaultConfig.proxyPort != -1) {
-            ProxyConfig(Proxy.Type.HTTP, InetSocketAddress(defaultConfig.proxyIp, defaultConfig.proxyPort))
-        } else {
-            Proxy.NO_PROXY
+        if (defaultConfig.proxyIp != EmptyString && defaultConfig.proxyPort != -1) {
+            proxy = ProxyConfig(
+                Proxy.Type.HTTP, InetSocketAddress(defaultConfig.proxyIp, defaultConfig.proxyPort)
+            )
         }
 
         //忽略https认证，可以使用https进行请求

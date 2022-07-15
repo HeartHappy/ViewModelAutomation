@@ -4,6 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonParseException
 import io.ktor.client.statement.*
 import io.ktor.http.parsing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * A generic class that holds a value with its loading status.
@@ -42,24 +44,29 @@ suspend inline fun <reified R> resultHandler(
                         isJson<R>(readText) -> {
                             println("HttpClient---> Result isJson:${R::class.java},${R::class.java.name}")
                             val fromJson = Gson().fromJson(readText, R::class.java)
-                            onSucceed(fromJson, response)
+                            withMainCoroutine { onSucceed(fromJson, response) }
                         }
                         isString<R>(readText) -> {
-                            onSucceed(readText as R, response)
+                            println("HttpClient---> Result isString:${R::class.java},${R::class.java.name}")
+                            withMainCoroutine { onSucceed(readText as R, response) }
                         }
                         else -> {
                             println("HttpClient---> Parsing error, response text: $readText, does not match response type: ${R::class.java}")
-                            onThrowable(JsonParseException("Parsing error, response text: $readText, does not match response type: ${R::class.java}"))
+                            withMainCoroutine { onThrowable(JsonParseException("Parsing error, response text: $readText, does not match response type: ${R::class.java}")) }
                         }
                     }
                 } else {
                     val failedBody = FailedBody(response.status.value, response.readText())
                     println("HttpClient---> Result failed:$failedBody")
-                    onFailure(failedBody)
+                    withMainCoroutine { onFailure(failedBody) }
                 }
             }
         }
     }
+}
+
+suspend fun withMainCoroutine(block: () -> Unit) {
+    withContext(Dispatchers.Main) { block() }
 }
 
 inline fun <reified R> isString(readText: String) = !isJsonString(readText) && rIsString<R>()

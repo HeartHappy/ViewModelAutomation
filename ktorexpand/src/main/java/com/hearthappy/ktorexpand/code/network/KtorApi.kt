@@ -8,27 +8,42 @@ import io.ktor.client.utils.*
 import io.ktor.http.*
 
 
-
 fun HttpRequestBuilder.jsonHeader() {
     header(HttpHeaders.ContentType, ContentType.Application.Json)
 }
 
-suspend inline fun <reified Response> HttpClient.getRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): Response = get(urlString = url) {
+suspend inline fun <reified Response> HttpClient.getRequest(
+    url: String,
+    headers: HttpRequestBuilder.() -> Unit,
+    httpRequestScope: HttpRequestBuilder.() -> Unit
+): Response = get(urlString = url) {
     headers()
     httpRequestScope()
 }
 
-suspend inline fun <reified Response> HttpClient.postRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): Response = post(urlString = url) {
+suspend inline fun <reified Response> HttpClient.postRequest(
+    url: String,
+    headers: HttpRequestBuilder.() -> Unit,
+    httpRequestScope: HttpRequestBuilder.() -> Unit
+): Response = post(urlString = url) {
     headers()
     httpRequestScope()
 }
 
-suspend inline fun <reified Response> HttpClient.patchRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): Response = patch(urlString = url) {
+suspend inline fun <reified Response> HttpClient.patchRequest(
+    url: String,
+    headers: HttpRequestBuilder.() -> Unit,
+    httpRequestScope: HttpRequestBuilder.() -> Unit
+): Response = patch(urlString = url) {
     headers()
     httpRequestScope()
 }
 
-suspend inline fun <reified Response> HttpClient.deleteRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): Response = delete(urlString = url) {
+suspend inline fun <reified Response> HttpClient.deleteRequest(
+    url: String,
+    headers: HttpRequestBuilder.() -> Unit,
+    httpRequestScope: HttpRequestBuilder.() -> Unit
+): Response = delete(urlString = url) {
     headers()
     httpRequestScope()
 }
@@ -45,14 +60,29 @@ suspend inline fun <reified Response> HttpClient.deleteRequest(url: String, head
  * @param appends @Body = FormUrlEncoded 时有数据
  * @return Any?
  */
-suspend inline fun <reified Response> sendKtorRequest(requestType: Int, bodyType: Int, url: String, headers: HttpRequestBuilder.() -> Unit = {}, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, defaultConfig: DefaultConfig= DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
+suspend inline fun <reified Response> sendKtorRequest(
+    requestType: Int = GET,
+    bodyType: Int = NONE,
+    url: String,
+    headers: HttpRequestBuilder.() -> Unit = {},
+    parameters: HttpRequestBuilder.() -> Unit = {},
+    requestBody: Any = EmptyContent,
+    appends: ParametersBuilder.() -> Unit = {},
+    defaultConfig: DefaultConfig = DefaultConfig(
+        EmptyString
+    )
+) = ktorClient(defaultConfig).use {
     when (requestType) {
         GET -> {
             when (bodyType) {
                 NONE -> it.getRequest(url, headers) { parameters() }
                 TEXT -> it.getRequest(url, headers) { body = GsonSerializer().write(requestBody) }
                 JSON -> it.getRequest(url, headers) { body = requestBody }
-                FORM_DATA -> it.submitForm(url = url, Parameters.build(appends), encodeInQuery = true) { headers() }
+                FORM_DATA -> it.submitForm(
+                    url = url,
+                    Parameters.build(appends),
+                    encodeInQuery = true
+                ) { headers() }
                 FormUrlEncoded -> it.getRequest(url, headers) {
                     body = FormDataContent(Parameters.build(appends))
                 }
