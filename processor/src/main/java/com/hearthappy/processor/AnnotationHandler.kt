@@ -259,7 +259,7 @@ private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Re
  */
 private fun getRequestUrl(requestAnt: Request, findServiceConfig: ServiceConfigData?): String {
     val url = requestAnt.urlString.asRest("{", "}") //处理全局URL
-    return findServiceConfig?.run { baseUrl.plus(url) } ?: url
+    return findServiceConfig?.run { "\${app.defaultConfig().baseURL}".plus(url) } ?: url
 }
 
 private fun findBaseConfig(serviceConfigData: List<ServiceConfigData>, requestAnt: Request): ServiceConfigData? {
