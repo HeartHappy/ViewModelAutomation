@@ -25,17 +25,17 @@ import com.hearthappy.viewmodelautomation.model.response.ResRegister
  *
  *
  * 测试用例：
- * 1、生成挂起高阶函数，由开发者自定义请求类型并传入请求
- * 2、开发者定义请求Bean，根据定义的请求类型生成相应请求参数，如Get，Post，Form，Delete，Patch.注意：requestClass必须是data class类型
+ * 1、参考requestClass中@Request的注解参数，传入请求类型,url（注意：requestClass必须是data class类型）
+ * 2、
  *
  * @property viewModel MainViewModel
  */
 @AndroidViewModel
 @BindStateFlow(methodName = "login", requestClass = ReLogin::class, responseClass = ResLogin::class)
-@BindStateFlow(methodName = "home", requestClass = ReHome::class, responseClass = ResHome::class)
-@BindStateFlow(methodName = "register", requestClass = ReRegister::class, responseClass = ResRegister::class)
-@BindLiveData(methodName = "deleteUser", requestClass = ReDelete::class, responseClass = String::class)
 @BindLiveData(methodName = "userInfo", requestClass = ReUserInfo::class, responseClass = String::class)
+@BindStateFlow(methodName = "register", requestClass = ReRegister::class, responseClass = ResRegister::class)
+@BindStateFlow(methodName = "home", requestClass = ReHome::class, responseClass = ResHome::class)
+@BindLiveData(methodName = "deleteUser", requestClass = ReDelete::class, responseClass = String::class)
 @BindStateFlow("getAppOption", ReAppOption::class, String::class)
 class MainActivity: AppCompatActivity() {
     private val viewModel by viewModels<MainViewModel>()
@@ -71,6 +71,24 @@ class MainActivity: AppCompatActivity() {
             }
         }
 
+
+
+        viewModel.userInfoLiveData.observe(this) {
+            when (it) {
+                is Result.Success -> {
+                    viewBinding.tvResult.text = it.body
+                }
+                is Result.Failed -> {
+                    viewBinding.tvResult.text = it.asFailedMessage()
+                }
+                is Result.Throwable -> {
+                    viewBinding.tvResult.text = it.asThrowableMessage()
+                }
+                else -> {
+                }
+            }
+        }
+
         lifecycleScope.launchWhenCreated {
             viewModel.getAppOptionStateFlow.collect {
                 when (it) {
@@ -89,22 +107,6 @@ class MainActivity: AppCompatActivity() {
                 }
             }
         }
-
-        viewModel.userInfoLiveData.observe(this) {
-            when (it) {
-                is Result.Success -> {
-                    it.data
-                }
-                is Result.Error -> {
-                    it.message
-                }
-                is Result.Throwable -> {
-                    it.e.message
-                }
-                else -> {
-                }
-            }
-        }
     }
 
     companion object {
@@ -115,5 +117,9 @@ class MainActivity: AppCompatActivity() {
         Log.d(TAG, "btnRequest: ")
         currentTimeMillis = System.currentTimeMillis()
         viewModel.login(ReLogin("user_5", "24cff18577e8dc8c6fdf53a6621a0b4d"))
+    }
+
+    fun btnRequest2(view: View) {
+        viewModel.userInfo(ReUserInfo("chen","123456"))
     }
 }

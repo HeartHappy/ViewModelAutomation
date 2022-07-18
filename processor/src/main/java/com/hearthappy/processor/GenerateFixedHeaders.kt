@@ -62,6 +62,7 @@ const val Text_EventStream = "HttpHeaders.ContentType, ContentType.Text.EventStr
 const val Video_Any = "HttpHeaders.ContentType, ContentType.Video.Any"
 const val Video_MPEG = "HttpHeaders.ContentType, ContentType.Video.MPEG"
 const val Video_MP4 = "HttpHeaders.ContentType, ContentType.Video.MP4"
+const val Video_OGG = "HttpHeaders.ContentType, ContentType.Video.OGG"
 const val Video_QuickTime = "HttpHeaders.ContentType, ContentType.Video.QuickTime"
 
 
@@ -125,6 +126,7 @@ internal fun String?.asFixedHeader(): String {
             ContentType.Video.Any -> Video_Any
             ContentType.Video.MPEG -> Video_MPEG
             ContentType.Video.MP4 -> Video_MP4
+            ContentType.Video.OGG -> Video_OGG
             ContentType.Video.QuickTime -> Video_QuickTime
             else -> Application_Json
         }

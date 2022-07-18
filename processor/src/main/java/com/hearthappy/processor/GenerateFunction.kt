@@ -20,7 +20,7 @@ internal fun generateFunctionByLiveData(it: BindLiveData, requestDataList: List<
     val function = FunSpec.builder(it.methodName).apply {
         generateMethodParametersSpec(requestDataList, viewModelParam)
         generateMethodRequestScope(requestDataList, viewModelParam, requiredImport)
-        addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Error(it))},")
+        addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Failed(it))},")
         addStatement("onSucceed = { body, _ ->${viewModelParam.priPropertyName}.postValue(Result.Success(body))},")
         addStatement("onThrowable = { ${viewModelParam.priPropertyName}.postValue(Result.Throwable(it))}")
         addStatement(")")

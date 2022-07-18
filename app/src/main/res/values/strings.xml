@@ -2,4 +2,5 @@
     <string name="app_name">ViewModelAutomationSamples</string>
     <string name="welcome_to_viewmodelautomation">Welcome to ViewModelAutomation!</string>
     <string name="send_request">send Request</string>
+    <string name="send_request2">sned request2</string>
 </resources>

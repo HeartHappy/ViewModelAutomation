@@ -6,7 +6,7 @@ import com.hearthappy.annotations.ServiceConfig
 
 @Service
 @ServiceConfig(baseURL = "http://192.168.51.23:50000")
-//@ServiceConfig(key = "server", baseURL = "http://192.168.30.69", proxyIp = "http://www.baidu.com", proxyPort = 3389, enableLog = false)
+@ServiceConfig(key = "server", baseURL = "http://192.168.30.69", proxyIp = "http://www.baidu.com", proxyPort = 3389, enableLog = false)
 class MyApplication: Application() {
 
     override fun onCreate() {
