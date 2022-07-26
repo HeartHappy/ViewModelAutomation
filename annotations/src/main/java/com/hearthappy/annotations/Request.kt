@@ -3,13 +3,13 @@ package com.hearthappy.annotations
 
 @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION) @Retention(AnnotationRetention.SOURCE)
 annotation class Request(
-    val type: RequestType = RequestType.GET,
+    val type: Http = Http.GET,
     val urlString: String,
     val serviceKey: String = "defaultConfig"
 )
 
 
-enum class RequestType {
+enum class Http {
     GET, POST, PATCH, DELETE
 }
 

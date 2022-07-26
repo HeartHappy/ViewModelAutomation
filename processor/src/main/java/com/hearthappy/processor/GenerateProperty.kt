@@ -28,7 +28,7 @@ internal fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(
         val generateMutableStateFlow = generateDelegatePropertySpec(
             viewModelParam.priPropertyName, mutableStateFlow.parameterizedBy(
                 requestState.parameterizedBy(viewModelParam.responseBody)
-            ), "${MUTABLE_STATE_FLOW}(${KTOR_REQUEST_STATE}.DEFAULT)", KModifier.PRIVATE
+            ), "${MUTABLE_STATE_FLOW}(${NETWORK_REQUEST_STATE}.DEFAULT)", KModifier.PRIVATE
         )
 
         classBuilder.addProperty(generateMutableStateFlow)

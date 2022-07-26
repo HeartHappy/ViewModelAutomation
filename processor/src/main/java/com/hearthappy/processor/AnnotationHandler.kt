@@ -38,7 +38,7 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
             val headerElements = headersElements.filterHeaderAntByRequestClass(requestElement)
             val headers = headerElements.map { HeaderData(it.getAnnotation(Header::class.java).value, it.simpleName.toString()) }
             val requestClass = requestElement.simpleName.toString()
-            val requestType = requestAnt.type
+            val httpType = requestAnt.type
             val findBaseConfig = findBaseConfig(createServiceConfigList, requestAnt)
             val requestUrl = getRequestUrl(requestAnt, findBaseConfig)
 
@@ -53,7 +53,7 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
 
             //获取get请求参数
             val requestParameters: List<String> = getRequestParameters(methodParameters, requestAnt, headers, requestBodyData)
-            val requestData = RequestData(requestClass, requestType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData)
+            val requestData = RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData)
             add(requestData)
 
             //sendNoteMsg("【RequestData】:$requestData")

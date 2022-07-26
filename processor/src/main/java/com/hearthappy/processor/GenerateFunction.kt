@@ -3,10 +3,11 @@ package com.hearthappy.processor
 import com.hearthappy.annotations.BindLiveData
 import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.annotations.BodyType
-import com.hearthappy.annotations.RequestType
+import com.hearthappy.annotations.Http
 import com.hearthappy.processor.common.KTOR_CLIENT_RESPONSE_PKG
-import com.hearthappy.processor.common.KTOR_REQUEST_SCOPE
-import com.hearthappy.processor.common.KTOR_REQUEST_STATE
+import com.hearthappy.processor.common.NETWORK_HEADER
+import com.hearthappy.processor.common.NETWORK_REQUEST_SCOPE
+import com.hearthappy.processor.common.NETWORK_REQUEST_STATE
 import com.hearthappy.processor.model.HeaderData
 import com.hearthappy.processor.model.RequestData
 import com.hearthappy.processor.model.ServiceConfigData
@@ -17,7 +18,7 @@ import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.TypeSpec
 
-internal fun generateFunctionByLiveData(it: BindLiveData, requestDataList: List<RequestData>, viewModelParam: ViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
+internal fun ViewModelProcessor.generateFunctionByLiveData(it: BindLiveData, requestDataList: List<RequestData>, viewModelParam: ViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
     val function = FunSpec.builder(it.methodName).apply {
         generateMethodParametersSpec(requestDataList, viewModelParam)
         generateMethodRequestScope(requestDataList, viewModelParam, requiredImport)
@@ -30,14 +31,16 @@ internal fun generateFunctionByLiveData(it: BindLiveData, requestDataList: List<
 }
 
 
-internal fun generateFunctionByStateFlow(it: BindStateFlow, requestDataList: List<RequestData>, viewModelParam: ViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
+internal fun ViewModelProcessor.generateFunctionByStateFlow(it: BindStateFlow, requestDataList: List<RequestData>, viewModelParam: ViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
+    val findRequestData = requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }
+    sendNoteMsg("findRequestData:${findRequestData?.fixedHeaders}")
     val function = FunSpec.builder(it.methodName).apply {
         generateMethodParametersSpec(requestDataList, viewModelParam)
-        addStatement("${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.LOADING")
+        addStatement("${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.LOADING")
         generateMethodRequestScope(requestDataList, viewModelParam, requiredImport)
-        addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.FAILED(it) },")
-        addStatement("onSucceed = { body,response-> ${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.SUCCEED(body,response) },")
-        addStatement("onThrowable = { ${viewModelParam.priPropertyName}.value = ${KTOR_REQUEST_STATE}.Throwable(it) }")
+        addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.FAILED(it) },")
+        addStatement("onSucceed = { body,response-> ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.SUCCEED(body,response) },")
+        addStatement("onThrowable = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.Throwable(it) }")
         addStatement(")")
     }
     classBuilder.addFunction(function.build())
@@ -48,44 +51,41 @@ private fun FunSpec.Builder.generateMethodRequestScope(requestDataList: List<Req
     findRequestData?.apply {
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = {")
         addRequiredImport(requiredImport)
-        generateRequestApi(requestType, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
+        generateRequestApi(http, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
         addStatement("},")
     }?:let {
-        requiredImport.add(KTOR_REQUEST_SCOPE)
+        requiredImport.add(NETWORK_REQUEST_SCOPE)
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = io,")
     }
 }
 
 private fun RequestData.addRequiredImport(requiredImport: MutableList<String>) {
-    requiredImport.add(requestType.name)
+    requiredImport.add(http.name)
     requiredImport.add(requestBodyData.bodyType.name)
+    if(headers.isNotEmpty() || fixedHeaders?.isNotEmpty() == true) requiredImport.add(NETWORK_HEADER)
 }
 
 
-/**
- * 生成网络请求接口
- * @receiver FunSpec.Builder
- * @param requestType RequestType
- * @param bodyType BodyType
- * @param url String
- * @param headers List<HeaderData>?
- * @param parameters List<String>?
- * @param requestBody Any?
- * @param appends Pair<String, Map<String, String>>?
- */
-private fun FunSpec.Builder.generateRequestApi(requestType: RequestType, bodyType: BodyType, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?) {
+private fun FunSpec.Builder.generateRequestApi(http: Http, bodyType: BodyType, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?) {
 
     addStatement("sendKtorRequest(")
-    if (requestBody != RequestType.GET) addStatement("requestType=${requestType}")
+    if (requestBody != Http.GET) addStatement("httpType=${http}")
     if (bodyType != BodyType.NONE) addStatement(",bodyType=${bodyType}")
 
     addStatement(",url=\"$url\"")
 
-    //    if (headers?.isNotEmpty() == true) {
-    addStatement(",headers={")
-    fixedHeaders?.forEach { addStatement("header(${it.asFixedHeader()})") }
-    headers?.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
-    addStatement("}") //    }
+//    addStatement(",headers = {")
+//    fixedHeaders?.forEach { addStatement("header(${it.asFixedHeader()})") }
+//    headers?.forEach { header -> addStatement("header(\"${header.key}\",${header.parameterName})") }
+//    addStatement("}")
+
+    if(headers?.isNotEmpty() == true || fixedHeaders?.isNotEmpty() == true){
+        addStatement(",headers = listOf(")
+        fixedHeaders?.forEach { addStatement("Header(${it.asFixedHeader()})") }
+        headers?.forEach { header -> addStatement("Header(\"${header.key}\",${header.parameterName})") }
+        addStatement(")")
+    }
+
 
     if (parameters?.isNotEmpty() == true && !parameters.contains(appends?.first)) {
         parameters.apply {

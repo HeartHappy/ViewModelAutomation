@@ -31,9 +31,9 @@ plugins {
     id 'kotlin-kapt'
 }
 dependencies {
-		//ktor网络框架
-		implementation("io.ktor:ktor-client-core:1.6.0")
-		//ktor网络框架封装和扩展类依赖
+	//ktor网络框架
+    implementation("io.ktor:ktor-client-core:1.6.0")
+	//ktor扩展库
     implementation("com.github.hearthappy.viewmodelautomation:ktor-expand:2.0.1")
     //注解库
     compileOnly("com.github.hearthappy.viewmodelautomation:annotations:2.0.1")

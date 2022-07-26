@@ -47,13 +47,13 @@ import javax.lang.model.element.TypeElement
         annotations: MutableSet<out TypeElement>?,
         roundEnv: RoundEnvironment?,
     ): Boolean {
-        startingTime = System.currentTimeMillis()
         return roundEnv?.processingOver()?.takeIf { it }?.apply { generatedFinish() } ?: processAnnotations(roundEnv)
     }
 
     private fun processAnnotations(
         roundEnv: RoundEnvironment?,
     ): Boolean {
+        startingTime = System.currentTimeMillis()
         return roundEnv?.run {
             val generatedSource = processingEnv.options[KAPT_KOTLIN_GENERATED] ?: run {
                 return sendErrorMsg("Can't find target source.")

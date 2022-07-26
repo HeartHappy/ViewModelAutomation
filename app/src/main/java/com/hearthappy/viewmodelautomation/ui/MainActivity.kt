@@ -67,9 +67,9 @@ import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
             viewModel.getImagesStateFlow.collect {
                 when (it) {
                     is RequestState.LOADING-> progress.show()
-                    is RequestState.SUCCEED -> tvResult.showSucceedMsg(it.body.toString())
-                    is RequestState.FAILED -> tvResult.showFailedMsg(it)
-                    is RequestState.Throwable -> tvResult.showThrowableMsg(it)
+                    is RequestState.SUCCEED -> tvResult.showSucceedMsg(it.body.toString(),progress)
+                    is RequestState.FAILED -> tvResult.showFailedMsg(it,progress)
+                    is RequestState.Throwable -> tvResult.showThrowableMsg(it,progress)
                     else -> Unit
                 }
             }

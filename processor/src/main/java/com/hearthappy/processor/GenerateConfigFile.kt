@@ -23,7 +23,7 @@ internal fun ViewModelProcessor.generateServiceConfigFile(createServiceConfigLis
     if (createServiceConfigList.isNotEmpty()) {
         val fileName = "ServiceConfig"
         val file = FileSpec.builder(GENERATE_CONFIG_PKG, fileName)
-        val defaultConfigClassName = ClassName(KTOR_NETWORK_PKG, KTOR_DEFAULT_CONFIG)
+        val defaultConfigClassName = ClassName(NETWORK_PKG, NETWORK_DEFAULT_CONFIG)
         createServiceConfigList.forEach { baseConfig ->
             val generateConfigProperty = generateDelegatePropertySpec(
                 baseConfig.key,

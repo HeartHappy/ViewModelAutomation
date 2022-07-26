@@ -32,7 +32,6 @@ internal fun ViewModelProcessor.generateAndroidViewModelFile(roundEnv: RoundEnvi
 //        val classBuilder = builderViewModelClassSpec(viewModelClassName)
         val generateClass = generateClass(viewModelClassName, listOf(ParameterSpec("app", application, KModifier.PRIVATE)), superClassName = androidViewModel)
 
-
         //通过BindLiveData创建属性、方法
         generatePropertyAndMethodByLiveData(generateClass, requestDataList, bindLiveDataAnt) { bld, requestDataList, viewModelParam ->
             sendNoteMsg("==================> Create function: ${bld.methodName}") //通过类型别名创建函数参数
@@ -70,11 +69,11 @@ internal fun ViewModelProcessor.generateFileAndWrite(viewModelClassName: String,
         //                .addAliasedImport(requestScopeX, "RequestScope") //导包取别名
         //                .addTypeAlias(typeAlias).build() //文件内添加类型别名
         if (requiredImport.isNotEmpty()) {
-            addImport(KTOR_NETWORK_PKG, requiredImport)
+            addImport(NETWORK_PKG, requiredImport)
             if(requiredImport.size>1){
-                addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER, KTOR_HEADER)
+                addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER)
                 //            addImport(KTOR_CLIENT_RESPONSE_PKG, HTTP_RESPONSE)
-                addImport(KTOR_HTTP_PKG, KTOR_HTTP_RESPONSE, KTOR_CONTENT_TYPE)
+                addImport(KTOR_HTTP_PKG, KTOR_HTTP_RESPONSE, NETWORK_CONTENT_TYPE)
             }
 
             if (serviceConfigList.isNotEmpty()) {
@@ -96,7 +95,7 @@ internal fun ViewModelProcessor.generateFileAndWrite(viewModelClassName: String,
  */
 private fun getFinallyRequiredImport(collectRequiredImport: List<String>): List<String> {
     return collectRequiredImport.isNotEmpty().takeIf { it }?.run {
-        collectRequiredImport.plus(KTOR_REQUEST_SCOPE).plus(KTOR_REQUEST).toSet().toList()
+        collectRequiredImport.plus(NETWORK_REQUEST_SCOPE).plus(NETWORK_REQUEST).toSet().toList()
     } ?: run { collectRequiredImport }
 }
 

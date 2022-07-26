@@ -8,34 +8,49 @@ import io.ktor.client.statement.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
 
-fun HttpRequestBuilder.jsonHeader() {
-    header(HttpHeaders.ContentType, ContentType.Application.Json)
+
+/**
+ * 默认Content-Type:application/json
+ * @receiver HttpRequestBuilder
+ */
+fun HttpRequestBuilder.jsonHeader() = header(HttpHeaders.ContentType, ContentType.Application.Json)
+
+val textHeader = Header(HttpHeaders.ContentType, ContentType.Text.Plain)
+
+/**
+ * 处理headers
+ * @receiver HttpRequestBuilder
+ * @param headers List<Header>
+ */
+fun HttpRequestBuilder.handleHeaders(headers: List<Header>?) {
+    val contentType = headers?.find { it.key == HttpHeaders.ContentType } //设置默认Content-Type为Json
+    contentType ?: jsonHeader()
+    headers?.forEach { header(it.key, it.value) }
 }
 
-suspend inline fun HttpClient.getRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = get(urlString = url) {
-    headers()
+suspend inline fun HttpClient.getRequest(url: String, headers: List<Header>?, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = get(urlString = url) {
+    handleHeaders(headers)
     httpRequestScope()
 }
 
-suspend inline fun HttpClient.postRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = post(urlString = url) {
-    headers()
+suspend inline fun HttpClient.postRequest(url: String, headers: List<Header>?, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = post(urlString = url) {
+    handleHeaders(headers)
     httpRequestScope()
 }
 
-suspend inline fun HttpClient.patchRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = patch(urlString = url) {
-    headers()
+suspend inline fun HttpClient.patchRequest(url: String, headers: List<Header>?, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = patch(urlString = url) {
+    handleHeaders(headers)
     httpRequestScope()
 }
 
-suspend inline fun HttpClient.deleteRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = delete(urlString = url) {
-    headers()
+suspend inline fun HttpClient.deleteRequest(url: String, headers: List<Header>?, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = delete(urlString = url) {
+    handleHeaders(headers)
     httpRequestScope()
 }
-
 
 /**
  *
- * @param requestType Int
+ * @param httpType Int
  * @param bodyType Int
  * @param url String
  * @param headers  @Header存在时有数据
@@ -44,14 +59,14 @@ suspend inline fun HttpClient.deleteRequest(url: String, headers: HttpRequestBui
  * @param appends @Body = FormUrlEncoded 时有数据
  * @return Any?
  */
-suspend inline fun sendKtorRequest(requestType: Int = GET, bodyType: Int = NONE, url: String, crossinline headers: HttpRequestBuilder.() -> Unit = { }, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
-    when (requestType) {
+suspend inline fun sendKtorRequest(httpType: Int = GET, bodyType: Int = NONE, url: String, headers: List<Header>? = null, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
+    when (httpType) {
         GET -> {
             when (bodyType) {
                 NONE -> it.getRequest(url, headers) { parameters() }
-                TEXT -> it.getRequest(url, headers) { setBody(Gson().toJson(requestBody)) }
+                TEXT -> it.getRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
                 JSON -> it.getRequest(url, headers) { setBody(requestBody) }
-                FormData -> it.submitForm(url = url, Parameters.build(appends), encodeInQuery = true) { headers() }
+                FormData -> it.submitForm(url = url, Parameters.build(appends), encodeInQuery = true) { handleHeaders(headers) }
                 FormUrlEncoded -> it.getRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
                 else -> throw RuntimeException("get other error")
             }
@@ -59,9 +74,9 @@ suspend inline fun sendKtorRequest(requestType: Int = GET, bodyType: Int = NONE,
         POST -> {
             when (bodyType) {
                 NONE -> it.postRequest(url, headers) { parameters() }
-                TEXT -> it.postRequest(url, headers) { setBody(Gson().toJson(requestBody)) }
+                TEXT -> it.postRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
                 JSON -> it.postRequest(url, headers) { setBody(requestBody) }
-                FormData -> it.submitForm(url = url, Parameters.build(appends)) { headers() }
+                FormData -> it.submitForm(url = url, Parameters.build(appends)) { handleHeaders(headers) }
                 FormUrlEncoded -> it.postRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
                 else -> throw RuntimeException("post other error")
             }
@@ -69,15 +84,13 @@ suspend inline fun sendKtorRequest(requestType: Int = GET, bodyType: Int = NONE,
         PATCH -> {
             when (bodyType) {
                 NONE -> it.patchRequest(url, headers) { parameters() }
-                TEXT -> it.patchRequest(url, headers) {
-                    header(HttpHeaders.ContentType, ContentType.Text.Plain)
+                TEXT -> it.patchRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) {
                     setBody(Gson().toJson(requestBody))
                 }
                 JSON -> it.patchRequest(url, headers) {
-                    header(HttpHeaders.ContentType, ContentType.Application.Json)
                     setBody(requestBody)
                 }
-                FormData -> it.submitForm(url = url, Parameters.build(appends)) { headers() }
+                FormData -> it.submitForm(url = url, Parameters.build(appends)) { handleHeaders(headers) }
                 FormUrlEncoded -> it.patchRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
                 else -> throw RuntimeException("patch other error")
             }
@@ -85,9 +98,9 @@ suspend inline fun sendKtorRequest(requestType: Int = GET, bodyType: Int = NONE,
         DELETE -> {
             when (bodyType) {
                 NONE -> it.deleteRequest(url, headers) { parameters() }
-                TEXT -> it.deleteRequest(url, headers) { setBody(Gson().toJson(requestBody)) }
+                TEXT -> it.deleteRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
                 JSON -> it.deleteRequest(url, headers) { setBody(requestBody) }
-                FormData -> it.submitForm(url = url, Parameters.build(appends)) { headers() }
+                FormData -> it.submitForm(url = url, Parameters.build(appends)) { handleHeaders(headers) }
                 FormUrlEncoded -> it.deleteRequest(url, headers) {
                     setBody(FormDataContent(Parameters.build(appends)))
                 }
@@ -95,7 +108,7 @@ suspend inline fun sendKtorRequest(requestType: Int = GET, bodyType: Int = NONE,
             }
         }
         else -> {
-            throw RuntimeException("KtorApi not implemented yet，The current RequestType value is $requestType")
+            throw RuntimeException("KtorApi not implemented yet，The current RequestType value is $httpType")
         }
     }
 }

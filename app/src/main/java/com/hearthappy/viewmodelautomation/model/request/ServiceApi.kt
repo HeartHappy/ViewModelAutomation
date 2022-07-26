@@ -27,8 +27,7 @@ data class ReImages(val page: Int, val size: Int)
  * @property loginBody LoginBody
  * @constructor
  */
-@Headers([ContentType.Application.Json])
-@Request(RequestType.POST, urlString = "/login")
+@Request(Http.POST, urlString = "/login")
 data class ReLogin(@Body val loginBody: LoginBody)
 
 data class LoginBody(val account: String, val password: String)
@@ -39,8 +38,7 @@ data class LoginBody(val account: String, val password: String)
  * @property mail String
  * @constructor
  */
-@Headers([ContentType.Application.Json])
-@Request(RequestType.POST, urlString = "/sendVerificationCode") @Body
+@Request(Http.POST, urlString = "/sendVerificationCode") @Body
 data class ReSendVerificationCode(val mail: String)
 
 
@@ -51,8 +49,6 @@ data class ReSendVerificationCode(val mail: String)
  * @property password String
  * @constructor
  */
-@Headers([ContentType.Application.Json])
-@Request(RequestType.POST, urlString = "/register")
+@Request(Http.POST, urlString = "/register")
 @Body
 data class ReRegister(val account: String, val code: String, val password: String)
-

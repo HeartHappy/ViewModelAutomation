@@ -1,10 +1,10 @@
 package com.hearthappy.processor.model
 
-import com.hearthappy.annotations.RequestType
+import com.hearthappy.annotations.Http
 
 data class RequestData(
     val requestClass: String,
-    val requestType: RequestType,
+    val http: Http,
     val url: String,
     val serviceConfigData: ServiceConfigData?,
     val headers: List<HeaderData>,
