@@ -25,20 +25,23 @@
       }
   }
   ```
-
+- 在项目 app 模块下的 build.gradle 文件中加入远程依赖和kapt插件
 ```groovy
+
 plugins {
     id 'kotlin-kapt'
 }
+
+
 dependencies {
 	//ktor网络框架
     implementation("io.ktor:ktor-client-core:1.6.0")
 	//ktor扩展库
-    implementation("com.github.hearthappy.viewmodelautomation:ktor-expand:1.0.0")
+    implementation("com.github.hearthappy.viewmodelautomation:ktor-expand:2.0.2")
     //注解库
-    compileOnly("com.github.hearthappy.viewmodelautomation:annotations:1.0.0")
+    compileOnly("com.github.hearthappy.viewmodelautomation:annotations:2.0.2")
     //处理注解自动生成库
-    kapt("com.github.hearthappy.viewmodelautomation:processor:1.0.0")
+    kapt("com.github.hearthappy.viewmodelautomation:processor:2.0.2")
 }
 ```
 
