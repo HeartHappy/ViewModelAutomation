@@ -36,7 +36,7 @@ dependencies {
     implementation 'com.google.auto.service:auto-service:1.0.1'
     kapt "com.google.auto.service:auto-service:1.0.1"
     //反射库
-//    implementation "org.jetbrains.kotlin:kotlin-reflect:1.6.10"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.6.10"
 }
 compileKotlin {
     kotlinOptions.jvmTarget = "1.8"
