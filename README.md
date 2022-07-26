@@ -34,11 +34,11 @@ dependencies {
 	//ktor网络框架
     implementation("io.ktor:ktor-client-core:1.6.0")
 	//ktor扩展库
-    implementation("com.github.hearthappy.viewmodelautomation:ktor-expand:2.0.1")
+    implementation("com.github.hearthappy.viewmodelautomation:ktor-expand:2.1.0")
     //注解库
-    compileOnly("com.github.hearthappy.viewmodelautomation:annotations:2.0.1")
+    compileOnly("com.github.hearthappy.viewmodelautomation:annotations:2.1.0")
     //处理注解自动生成库
-    kapt("com.github.hearthappy.viewmodelautomation:processor:2.0.1")
+    kapt("com.github.hearthappy.viewmodelautomation:processor:2.1.0")
 }
 ```
 
@@ -46,7 +46,7 @@ dependencies {
 
 #### 三、使用示例（或参考Demo）：
 
-###### 1、使用@BindStateFlow或@BindLiveData生成命名函数并绑定StateFlow/LiveData属性
+##### 1、使用@BindStateFlow或@BindLiveData生成命名函数并绑定StateFlow/LiveData属性
 
 ```kotlin
 @AndroidViewModel
@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-###### 2、使用@Request注解生成网络请求（GET示例。其他类型参见，标题四：“HTTP请求”）
+##### 2、使用@Request注解生成网络请求（GET示例。其他类型参见，标题四：“HTTP请求”）
 
 ```kotlin
 /**
@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity() {
 data class ReImages(val page: Int, val size: Int)
 ```
 
-###### 3、使用ViewModel
+##### 3、使用ViewModel
 
 ```kotlin
 //Activity中添加
@@ -93,7 +93,7 @@ lifecycleScope.launchWhenCreated {
 }
 ```
 
-###### 4、生成MainViewModel
+##### 4、生成MainViewModel
 
 ###### （1）完成步骤2基础上，点击AndroidStudio->Build->Make Project，编译生成MainViewModel类
 
@@ -117,7 +117,7 @@ data class ReImages(val page: Int, val size: Int)
  *方式一：ReRegister为Body
  *
  */
-@Request(RequestType.POST, urlString = "/register") 
+@Request(Http.POST, urlString = "/register") 
 @Body
 data class ReRegister(val account: String, val code: String, val password: String)
 
@@ -125,7 +125,7 @@ data class ReRegister(val account: String, val code: String, val password: Strin
 /**
  * 方式二：需要传入动态header或REST时
  */
-@Request(RequestType.POST, urlString = "/login")
+@Request(Http.POST, urlString = "/login")
 data class ReLogin(@Header("X-Auth-Token") val token:String,@Body val loginBody: LoginBody)
 
 data class LoginBody(val account: String, val password: String)
@@ -134,7 +134,7 @@ data class LoginBody(val account: String, val password: String)
 ##### 3、FormUrlEncode
 
 ```kotlin
-@Request(RequestType.POST, urlString = "/login")
+@Request(Http.POST, urlString = "/login")
 data class ReLogin(@Body(BodyType.FormUrlEncoded) val loginBody: LoginBody)
 
 data class LoginBody(@Query("account")val account: String,@Query("password") val password: String)
@@ -143,7 +143,7 @@ data class LoginBody(@Query("account")val account: String,@Query("password") val
 ##### 4、PATCH
 
 ```kotlin
-@Request(type = RequestType.PATCH, urlString = "/identity/v3/users/{userid}")
+@Request(Http.PATCH, urlString = "/identity/v3/users/{userid}")
 data class ReUpdatePwd(@Header("X-Auth-Token") val token: String, val userid: String, @Body(BodyType.JSON) val updatePasswordBody: UpdatePasswordBody)
 
 
@@ -155,7 +155,7 @@ data class UpdatePasswordBody(val user:UserBean){
 ##### 5、DELETE
 
 ```kotlin
-@Request(RequestType.DELETE,"/veaudit/v2/vir_msg/{instance_id}")
+@Request(Http.DELETE,"/veaudit/v2/vir_msg/{instance_id}")
 data class ReErrorMessReset(@Header("X-Auth-Token") val token: String,val instance_id:String)
 ```
 
@@ -222,7 +222,7 @@ class LoginActivity: BaseActivity() {
  * @constructor
  */
 @Headers([ContentType.Application.Json])
-@Request(RequestType.DELETE,"/veaudit/v2/vir_msg/{instance_id}")
+@Request(Http.DELETE,"/veaudit/v2/vir_msg/{instance_id}")
 data class ReErrorMessReset(@Header("X-Auth-Token") val token: String,val instance_id:String)
 ```
 
@@ -273,7 +273,7 @@ viewModel.test{ login() }
 
 #### 五、注解说明：
 
-###### 1、@AndroidViewModel
+##### 1、@AndroidViewModel
 
 |        参数        |        描述         | 必须 |                            默认值                            |
 | :----------------: | :-----------------: | :--: | :----------------------------------------------------------: |
@@ -281,7 +281,7 @@ viewModel.test{ login() }
 
 
 
-###### 2、@BindLiveData与@BindStateFlow
+##### 2、@BindLiveData与@BindStateFlow
 
 |            参数            |              描述              | 必须 |                 默认值                  |
 | :------------------------: | :----------------------------: | :--: | :-------------------------------------: |
@@ -292,7 +292,7 @@ viewModel.test{ login() }
 
 
 
-###### 3、@Request
+##### 3、@Request
 
 |    参数    |                       描述                       | 必须 |    默认值     |
 | :--------: | :----------------------------------------------: | :--: | :-----------: |
@@ -302,9 +302,9 @@ viewModel.test{ login() }
 
 
 
-###### 4、@Service（标记全局配置注解，使用@ServiceConfig注解时必须添加该注解）
+##### 4、@Service（标记全局配置注解，使用@ServiceConfig注解时必须添加该注解）
 
-###### 5、@ServiceConfig（支持多全局配置，通过key区分）
+##### 5、@ServiceConfig（支持多全局配置，通过key区分）
 
 |   参数    |      描述       | 必须 |    默认值     |
 | :-------: | :-------------: | :--: | :-----------: |
