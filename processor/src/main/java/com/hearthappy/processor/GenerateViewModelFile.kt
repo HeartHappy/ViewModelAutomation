@@ -71,9 +71,11 @@ internal fun ViewModelProcessor.generateFileAndWrite(viewModelClassName: String,
         //                .addTypeAlias(typeAlias).build() //文件内添加类型别名
         if (requiredImport.isNotEmpty()) {
             addImport(KTOR_NETWORK_PKG, requiredImport)
-            addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER, KTOR_HEADER)
-//            addImport(KTOR_CLIENT_RESPONSE_PKG, HTTP_RESPONSE)
-            addImport(KTOR_HTTP_PKG, KTOR_HTTP_RESPONSE, KTOR_CONTENT_TYPE)
+            if(requiredImport.size>1){
+                addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER, KTOR_HEADER)
+                //            addImport(KTOR_CLIENT_RESPONSE_PKG, HTTP_RESPONSE)
+                addImport(KTOR_HTTP_PKG, KTOR_HTTP_RESPONSE, KTOR_CONTENT_TYPE)
+            }
 
             if (serviceConfigList.isNotEmpty()) {
                 val map = serviceConfigList.map { it.key }

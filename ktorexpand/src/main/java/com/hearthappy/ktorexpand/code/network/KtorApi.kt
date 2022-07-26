@@ -8,36 +8,26 @@ import io.ktor.client.statement.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
 
-
-/*
-fun main() = runBlocking {
-    val measureTimeMillis = measureTimeMillis {
-        val submitForm = ktorClient().submitForm("http://192.168.51.23:50000/c-api/user-login-pwd", Parameters.build {
-            append("username", "user_3")
-            append("password", "24cff18577e8dc8c6fdf53a6621a0b4d")
-        })
-        println("result:${submitForm.bodyAsText()}")
-    }
-    println("end:${measureTimeMillis}")
+fun HttpRequestBuilder.jsonHeader() {
+    header(HttpHeaders.ContentType, ContentType.Application.Json)
 }
-*/
 
-suspend inline fun HttpClient.getRequest(url: String, headers: HttpRequestBuilder.() -> Unit, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = get(urlString = url) {
+suspend inline fun HttpClient.getRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = get(urlString = url) {
     headers()
     httpRequestScope()
 }
 
-suspend inline fun HttpClient.postRequest(url: String, headers: HttpRequestBuilder.() -> Unit, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = post(urlString = url) {
+suspend inline fun HttpClient.postRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = post(urlString = url) {
     headers()
     httpRequestScope()
 }
 
-suspend inline fun HttpClient.patchRequest(url: String, headers: HttpRequestBuilder.() -> Unit, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = patch(urlString = url) {
+suspend inline fun HttpClient.patchRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = patch(urlString = url) {
     headers()
     httpRequestScope()
 }
 
-suspend inline fun HttpClient.deleteRequest(url: String, headers: HttpRequestBuilder.() -> Unit, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = delete(urlString = url) {
+suspend inline fun HttpClient.deleteRequest(url: String, headers: HttpRequestBuilder.() -> Unit = { jsonHeader() }, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = delete(urlString = url) {
     headers()
     httpRequestScope()
 }
@@ -54,7 +44,7 @@ suspend inline fun HttpClient.deleteRequest(url: String, headers: HttpRequestBui
  * @param appends @Body = FormUrlEncoded 时有数据
  * @return Any?
  */
-suspend inline fun sendKtorRequest(requestType: Int = GET, bodyType: Int = NONE, url: String, crossinline headers: HttpRequestBuilder.() -> Unit = {}, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
+suspend inline fun sendKtorRequest(requestType: Int = GET, bodyType: Int = NONE, url: String, crossinline headers: HttpRequestBuilder.() -> Unit = { }, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
     when (requestType) {
         GET -> {
             when (bodyType) {
@@ -73,17 +63,20 @@ suspend inline fun sendKtorRequest(requestType: Int = GET, bodyType: Int = NONE,
                 JSON -> it.postRequest(url, headers) { setBody(requestBody) }
                 FormData -> it.submitForm(url = url, Parameters.build(appends)) { headers() }
                 FormUrlEncoded -> it.postRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
-                MultipartFormData -> it.submitFormWithBinaryData(url, formData {
-
-                }) { headers() }
                 else -> throw RuntimeException("post other error")
             }
         }
         PATCH -> {
             when (bodyType) {
                 NONE -> it.patchRequest(url, headers) { parameters() }
-                TEXT -> it.patchRequest(url, headers) { setBody(Gson().toJson(requestBody)) }
-                JSON -> it.patchRequest(url, headers) { setBody(requestBody) }
+                TEXT -> it.patchRequest(url, headers) {
+                    header(HttpHeaders.ContentType, ContentType.Text.Plain)
+                    setBody(Gson().toJson(requestBody))
+                }
+                JSON -> it.patchRequest(url, headers) {
+                    header(HttpHeaders.ContentType, ContentType.Application.Json)
+                    setBody(requestBody)
+                }
                 FormData -> it.submitForm(url = url, Parameters.build(appends)) { headers() }
                 FormUrlEncoded -> it.patchRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
                 else -> throw RuntimeException("patch other error")
@@ -95,7 +88,9 @@ suspend inline fun sendKtorRequest(requestType: Int = GET, bodyType: Int = NONE,
                 TEXT -> it.deleteRequest(url, headers) { setBody(Gson().toJson(requestBody)) }
                 JSON -> it.deleteRequest(url, headers) { setBody(requestBody) }
                 FormData -> it.submitForm(url = url, Parameters.build(appends)) { headers() }
-                FormUrlEncoded -> it.deleteRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
+                FormUrlEncoded -> it.deleteRequest(url, headers) {
+                    setBody(FormDataContent(Parameters.build(appends)))
+                }
                 else -> throw RuntimeException("delete other error")
             }
         }

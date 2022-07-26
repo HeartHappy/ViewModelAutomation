@@ -14,10 +14,10 @@
         android:theme="@style/Theme.ViewModelAutomationSamples"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".TestActivity"
+            android:name=".ui.TestActivity"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,6 +25,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ui.RegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

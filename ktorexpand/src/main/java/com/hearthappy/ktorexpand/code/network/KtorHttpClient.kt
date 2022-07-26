@@ -11,16 +11,14 @@ import java.net.InetSocketAddress
 import java.net.Proxy
 
 
-fun ktorClient(defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = HttpClient(OkHttp) {
+fun ktorClient(defaultConfig: DefaultConfig) = HttpClient(OkHttp) {
     expectSuccess = false //false：禁用，验证ResponseCode处理的异常，只有200为成功，其他的都会作为异常处理
     engine {
         threadsCount = 4
         pipelining = false
 
-        if (defaultConfig.proxyIp != EmptyString && defaultConfig.proxyPort != -1) {
-            proxy = ProxyConfig(
-                Proxy.Type.HTTP, InetSocketAddress(defaultConfig.proxyIp, defaultConfig.proxyPort)
-            )
+        if (defaultConfig.proxyIP != EmptyString && defaultConfig.proxyPort != -1) {
+            proxy = ProxyConfig(Proxy.Type.HTTP, InetSocketAddress(defaultConfig.proxyIP, defaultConfig.proxyPort))
         } //https认证
         /*https {
             // this: TLSConfigBuilder
@@ -50,7 +48,7 @@ fun ktorClient(defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = Http
 
 
 
-    install(ContentNegotiation){
+    install(ContentNegotiation) {
         gson()
     }
 

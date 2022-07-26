@@ -13,7 +13,7 @@ internal fun getServiceConfigList(serviceElements: Set<Element>): List<ServiceCo
     serviceElements.forEach {
         val serviceConfigs = it.getAnnotationsByType(ServiceConfig::class.java)
         serviceConfigs.forEach { serviceConfig ->
-            list.add(ServiceConfigData(serviceConfig.key, serviceConfig.baseURL, serviceConfig.enableLog, serviceConfig.proxyIp, serviceConfig.proxyPort))
+            list.add(ServiceConfigData(serviceConfig.key, serviceConfig.baseURL, serviceConfig.enableLog, serviceConfig.proxyIP, serviceConfig.proxyPort))
         }
     }
     return list
@@ -41,8 +41,8 @@ internal fun ViewModelProcessor.generateServiceConfigFile(createServiceConfigLis
 
 private fun createDefaultConfig(serviceConfig: ServiceConfigData): String {
     val startBuilder = StringBuilder("DefaultConfig(baseURL=\"${serviceConfig.baseUrl}\",enableLog=${serviceConfig.enabledLog}")
-    if (serviceConfig.proxyIp.isNotEmpty() && serviceConfig.proxyPort != -1) {
-        startBuilder.append(",proxyIp=\"${serviceConfig.proxyIp}\" ,proxyPort=${serviceConfig.proxyPort}")
+    if (serviceConfig.proxyIP.isNotEmpty() && serviceConfig.proxyPort != -1) {
+        startBuilder.append(",proxyIP=\"${serviceConfig.proxyIP}\" ,proxyPort=${serviceConfig.proxyPort}")
     }
     val endBuilder = startBuilder.append(")")
     return endBuilder.toString()

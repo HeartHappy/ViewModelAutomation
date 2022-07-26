@@ -5,6 +5,7 @@ import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.annotations.BodyType
 import com.hearthappy.annotations.RequestType
 import com.hearthappy.processor.common.KTOR_CLIENT_RESPONSE_PKG
+import com.hearthappy.processor.common.KTOR_REQUEST_SCOPE
 import com.hearthappy.processor.common.KTOR_REQUEST_STATE
 import com.hearthappy.processor.model.HeaderData
 import com.hearthappy.processor.model.RequestData
@@ -43,18 +44,15 @@ internal fun generateFunctionByStateFlow(it: BindStateFlow, requestDataList: Lis
 }
 
 private fun FunSpec.Builder.generateMethodRequestScope(requestDataList: List<RequestData>, viewModelParam: ViewModelData, requiredImport: MutableList<String>) { //没有@Request注解的请求
-    if (requestDataList.isEmpty()) {
-        addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = io,")
-    } else {
-
-        //拥有@Request注解请求
-        val findRequestData = requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }
+    val findRequestData = requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }
+    findRequestData?.apply {
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = {")
-        findRequestData?.apply {
-            addRequiredImport(requiredImport)
-            generateRequestApi(requestType, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
-        }
+        addRequiredImport(requiredImport)
+        generateRequestApi(requestType, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
         addStatement("},")
+    }?:let {
+        requiredImport.add(KTOR_REQUEST_SCOPE)
+        addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = io,")
     }
 }
 
@@ -116,11 +114,8 @@ private fun FunSpec.Builder.generateRequestApi(requestType: RequestType, bodyTyp
 
 
 private fun FunSpec.Builder.generateMethodParametersSpec(requestDataList: List<RequestData>, viewModelParam: ViewModelData) { //没有@Request注解时，由开发者自定义请求
-    if (requestDataList.isEmpty()) {
-        addParameter("io", LambdaTypeName.get(returnType = ClassName(KTOR_CLIENT_RESPONSE_PKG, "HttpResponse")).copy(suspending = true))
-    } else { //有@Request注解时，自动生成响应请求
-        requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }?.methodParameters?.forEach {
-            addParameter(it.parameterName, it.parameterType.asKotlinClassName())
-        }
-    }
+    //生成方法参数
+    requestDataList.find { it.requestClass == viewModelParam.requestBody.simpleName }?.methodParameters?.forEach {
+        addParameter(it.parameterName, it.parameterType.asKotlinClassName())
+    } ?: addParameter("io", LambdaTypeName.get(returnType = ClassName(KTOR_CLIENT_RESPONSE_PKG, "HttpResponse")).copy(suspending = true))
 }

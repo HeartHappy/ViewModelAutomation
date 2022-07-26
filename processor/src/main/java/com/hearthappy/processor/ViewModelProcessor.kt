@@ -34,7 +34,7 @@ import javax.lang.model.element.TypeElement
  */
 @AutoService(Processor::class) class ViewModelProcessor: AbstractProcessor() { //导包所需
 
-
+    private var startingTime = 0L
     override fun getSupportedSourceVersion(): SourceVersion {
         return SourceVersion.latestSupported()
     }
@@ -47,6 +47,7 @@ import javax.lang.model.element.TypeElement
         annotations: MutableSet<out TypeElement>?,
         roundEnv: RoundEnvironment?,
     ): Boolean {
+        startingTime = System.currentTimeMillis()
         return roundEnv?.processingOver()?.takeIf { it }?.apply { generatedFinish() } ?: processAnnotations(roundEnv)
     }
 
@@ -69,7 +70,7 @@ import javax.lang.model.element.TypeElement
 
 
     private fun generatedFinish(): Boolean {
-        println("==================> build complete")
+        println("==================> build complete.Takes ${System.currentTimeMillis() - startingTime}ms")
         return true
     }
 
@@ -82,7 +83,6 @@ import javax.lang.model.element.TypeElement
         processingEnv.errorMessage { msg }
         return false
     }
-
 
 
     @Suppress("unused") private fun outElementsAllLog(tag: Any, elements: MutableSet<out Element>) {

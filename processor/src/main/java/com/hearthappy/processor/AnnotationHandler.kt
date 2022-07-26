@@ -252,10 +252,10 @@ private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Re
 }
 
 /**
- * 获取请求Url,baseUrl+ urlString
+ * 获取请求Url,baseURL+ urlString
  * @param requestAnt Request
  * @param findServiceConfig BaseConfigData?  查找到的BaseConfig
- * @return String
+ * @return String 返回最终请求URL
  */
 private fun getRequestUrl(requestAnt: Request, findServiceConfig: ServiceConfigData?): String {
     val url = requestAnt.urlString.asRest("{", "}") //处理全局URL

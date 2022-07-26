@@ -1,18 +1,17 @@
 package com.hearthappy.viewmodelautomation.model.response
 
-/**
- * Created Date 2020/11/30.
- *
- * @author ChenRui
- * ClassDescription:new login intface
- */
 data class ResLogin(
-    val group_id: String,
-    val header: String,
-    val id: String,
-    val is_initial: Boolean,
-    val refresh_expires: Int,
-    val refresh_token: String,
-    val token: String,
-    val token_expires: Int
-)
+    val code: Int,
+    val message: String,
+    val result: Result?
+) {
+    data class Result(
+        val account: String,
+        val createdAt: String,
+        val deletedAt: Any,
+        val id: Int,
+        val level: Int,
+        val token: String,
+        val updatedAt: String
+    )
+}

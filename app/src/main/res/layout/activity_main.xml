@@ -6,25 +6,24 @@
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
-    tools:context="com.hearthappy.viewmodelautomation.MainActivity">
+    tools:context="com.hearthappy.viewmodelautomation.ui.MainActivity">
+
 
     <Button
-        android:id="@+id/btn1"
+        android:id="@+id/btnGetImages"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:onClick="btnRequest"
-        android:text="@string/send_request"
+        android:text="@string/get_images"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/btn2"
+        android:id="@+id/btnGetVideoList"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:onClick="btnRequest2"
-        android:text="@string/send_request2"
+        android:text="@string/get_video_list"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
@@ -38,5 +37,14 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btn1" />
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </LinearLayout>
