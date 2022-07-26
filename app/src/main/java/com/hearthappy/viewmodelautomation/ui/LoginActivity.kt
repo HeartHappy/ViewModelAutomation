@@ -5,7 +5,6 @@ import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.hearthappy.annotations.AndroidViewModel
 import com.hearthappy.annotations.BindStateFlow
-import com.hearthappy.compiler.config.defaultConfig
 import com.hearthappy.compiler.viewmodel.LoginViewModel
 import com.hearthappy.ktorexpand.code.network.RequestState
 import com.hearthappy.viewmodelautomation.databinding.ActivityLoginBinding
@@ -27,7 +26,7 @@ class LoginActivity: BaseActivity() {
         super.onCreate(savedInstanceState)
         viewBinding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(viewBinding.root)
-        
+
         viewBinding.apply {
             viewModelListener()
             btnLogin.setOnClickListener {
