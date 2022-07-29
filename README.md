@@ -1,4 +1,4 @@
-## ViewModel、网络请求自动生成框架
+## 自动生成ViewModel、网络请求框架
 
 #### 一、项目地址：[Github](https://github.com/HeartHappy/ViewModelAutomation)
 
