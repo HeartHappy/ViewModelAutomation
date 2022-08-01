@@ -34,14 +34,14 @@ plugins {
 
 
 dependencies {
-	//ktor网络框架
+    //ktor网络框架
     implementation("io.ktor:ktor-client-core:1.6.0")
-	//ktor扩展库
-    implementation("com.github.hearthappy.viewmodelautomation:ktor-expand:2.0.2")
+    //ktor扩展库
+    implementation("com.github.hearthappy.viewmodelautomation:ktor-expand:2.0.4")
     //注解库
-    compileOnly("com.github.hearthappy.viewmodelautomation:annotations:2.0.2")
+    compileOnly("com.github.hearthappy.viewmodelautomation:annotations:2.0.4")
     //处理注解自动生成库
-    kapt("com.github.hearthappy.viewmodelautomation:processor:2.0.2")
+    kapt("com.github.hearthappy.viewmodelautomation:processor:2.0.4")
 }
 ```
 
