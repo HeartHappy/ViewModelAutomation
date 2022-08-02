@@ -22,7 +22,6 @@ import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
  *
  * 测试用例：
  * 1、参考requestClass中@Request的注解参数，传入请求类型,url（注意：requestClass必须是data class类型）
- * 2、
  *
  * @property viewModel MainViewModel
  */
@@ -38,8 +37,6 @@ class MainActivity: BaseActivity() {
         super.onCreate(savedInstanceState)
         viewBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(viewBinding.root)
-
-
 
         viewBinding.apply {
             viewModelListener()
