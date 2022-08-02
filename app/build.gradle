@@ -36,6 +36,8 @@ android {
         jvmTarget = '1.8'
     }
 }
+
+
 def ktorVersion = "2.0.3"
 def lifecycleVersion = "2.3.1"
 dependencies {

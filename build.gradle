@@ -6,6 +6,11 @@ plugins {
 //    id 'org.jetbrains.kotlin.plugin.serialization' version '1.6.21' //使用io.ktor:ktor-serialization-kotlinx-json:$ktorVersion 库时所需序列化插件
 }
 
+/*tasks.withType(org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask.class)
+        .configureEach {
+            kaptProcessJvmArgs.add('-Xmx512m')
+        }*/
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }

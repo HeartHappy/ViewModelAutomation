@@ -11,5 +11,6 @@ data class RequestData(
     val fixedHeaders: List<String>?,
     val methodParameters: List<ParameterData>,
     val requestParameters: List<String>,
-    val requestBodyData: RequestBodyData
+    val requestBodyData: RequestBodyData,
+    val site:String?
 )

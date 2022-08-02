@@ -2,19 +2,19 @@ package com.hearthappy.processor
 
 import com.hearthappy.annotations.ServiceConfig
 import com.hearthappy.processor.common.*
-import com.hearthappy.processor.common.application
 import com.hearthappy.processor.model.ServiceConfigData
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
 import java.io.File
 import javax.lang.model.element.Element
 
 internal fun getServiceConfigList(serviceElements: Set<Element>): List<ServiceConfigData> {
     val list = mutableListOf<ServiceConfigData>()
-    serviceElements.forEach {
-        val serviceConfigs = it.getAnnotationsByType(ServiceConfig::class.java)
-        serviceConfigs.forEach { serviceConfig ->
-            list.add(ServiceConfigData(serviceConfig.key, serviceConfig.baseURL, serviceConfig.enableLog, serviceConfig.proxyIP, serviceConfig.proxyPort))
-        }
+    for (serviceElement in serviceElements) {
+        val serviceConfigs = serviceElement.getAnnotationsByType(ServiceConfig::class.java)
+        for (serviceConfig in serviceConfigs) list.add(ServiceConfigData(serviceConfig.key, serviceConfig.baseURL, serviceConfig.enableLog, serviceConfig.proxyIP, serviceConfig.proxyPort))
     }
     return list
 }
@@ -24,13 +24,8 @@ internal fun ViewModelProcessor.generateServiceConfigFile(createServiceConfigLis
         val fileName = "ServiceConfig"
         val file = FileSpec.builder(GENERATE_CONFIG_PKG, fileName)
         val defaultConfigClassName = ClassName(NETWORK_PKG, NETWORK_DEFAULT_CONFIG)
-        createServiceConfigList.forEach { baseConfig ->
-            val generateConfigProperty = generateDelegatePropertySpec(
-                baseConfig.key,
-                defaultConfigClassName,
-                createDefaultConfig(baseConfig),
-                KModifier.PRIVATE
-            )
+        for (baseConfig in createServiceConfigList) {
+            val generateConfigProperty = generateDelegatePropertySpec(baseConfig.key, defaultConfigClassName, createDefaultConfig(baseConfig), KModifier.PRIVATE)
             file.addProperty(generateConfigProperty)
             file.addFunction(FunSpec.builder(baseConfig.key).receiver(application).returns(defaultConfigClassName).addStatement("return ${baseConfig.key}").build())
         }

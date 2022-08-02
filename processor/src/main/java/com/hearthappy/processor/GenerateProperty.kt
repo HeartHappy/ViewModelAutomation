@@ -14,15 +14,15 @@ import com.squareup.kotlinpoet.TypeSpec
 import javax.lang.model.type.MirroredTypeException
 import kotlin.reflect.KClass
 
-internal fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(
+internal inline fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(
     classBuilder: TypeSpec.Builder,
     requestDataList: List<RequestData>,
     bindStateFlow: Array<BindStateFlow>?,
-    finishBlock: (BindStateFlow, List<RequestData>, ViewModelData) -> Unit
+    finishBlock: (BindStateFlow, RequestData?, ViewModelData) -> Unit
 ) {
     bindStateFlow?.onEach {
         val viewModelParam = it.getViewModelParam()
-
+        val requestData = requestDataList.find {requestData-> requestData.requestClass == viewModelParam.requestBody.simpleName }
         sendNoteMsg("==================> Create a private ${viewModelParam.priPropertyName}")
 
         val generateMutableStateFlow = generateDelegatePropertySpec(
@@ -42,19 +42,20 @@ internal fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(
 
         classBuilder.addProperty(generateStateFlow)
 
-        finishBlock(it, requestDataList, viewModelParam)
+        finishBlock(it, requestData, viewModelParam)
     }
 }
 
 
-internal fun ViewModelProcessor.generatePropertyAndMethodByLiveData(
+internal inline fun ViewModelProcessor.generatePropertyAndMethodByLiveData(
     classBuilder: TypeSpec.Builder,
     requestDataList: List<RequestData>,
     bindLiveData: Array<BindLiveData>?,
-    finishBlock: (BindLiveData, List<RequestData>, ViewModelData) -> Unit
+    finishBlock: (BindLiveData, RequestData?, ViewModelData) -> Unit
 ) {
     bindLiveData?.onEach {
         val viewModelParam = it.getViewModelParam()
+        val requestData = requestDataList.find {requestData-> requestData.requestClass == viewModelParam.requestBody.simpleName }
 
         sendNoteMsg("==================> Create a private ${viewModelParam.priPropertyName}") //创建私有属性
         val generateMutableLiveData = generateDelegatePropertySpec(
@@ -72,7 +73,7 @@ internal fun ViewModelProcessor.generatePropertyAndMethodByLiveData(
         )
         classBuilder.addProperty(generateLiveData)
 
-        finishBlock(it, requestDataList, viewModelParam)
+        finishBlock(it, requestData, viewModelParam)
     }
 }
 

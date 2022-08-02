@@ -28,6 +28,7 @@ java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 }
+
 dependencies {
 
     //Notice: 2021/12/23 编译时所需库

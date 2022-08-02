@@ -27,18 +27,27 @@ fun generateDelegatePropertySpec(propertyName: String, propertyType: TypeName, d
     return PropertySpec.builder(propertyName, propertyType).delegate("lazy{$delegateValue}").addModifiers(*modifier).build()
 }
 
+
+/**
+ * 生成Class
+ * @param className String
+ * @param constructorParameters List<ParameterSpec>
+ * @param isAddConstructorProperty Boolean
+ * @param superClassName ClassName?
+ * @return TypeSpec.Builder
+ */
 fun generateClass(className: String, constructorParameters: List<ParameterSpec> = listOf(), isAddConstructorProperty: Boolean = true, superClassName: ClassName? = null): TypeSpec.Builder {
     return TypeSpec.classBuilder(className).apply {
         if (constructorParameters.isNotEmpty()) { //创建构造参数
             primaryConstructor(FunSpec.constructorBuilder().addParameters(constructorParameters).build())
 
             if (isAddConstructorProperty) { //创建构造参数属性，（即：添加val ，提供内部引用）
-                constructorParameters.forEach { addProperty(generatePropertySpec(it.name, it.type, it.name, KModifier.PRIVATE)) }
+                for (cp in constructorParameters) addProperty(generatePropertySpec(cp.name, cp.type, cp.name, KModifier.PRIVATE))
             }
-            constructorParameters.forEach { addSuperclassConstructorParameter(it.name) }
+            for (cp in constructorParameters) addSuperclassConstructorParameter(cp.name)
         }
         superClassName?.let { superclass(superClassName) }
     }
 }
 
-fun generateFunctionSpec() {}
+//fun generateFunctionSpec() {}

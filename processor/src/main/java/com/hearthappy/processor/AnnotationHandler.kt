@@ -21,39 +21,47 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
     val fixedHeadersElements = roundEnv.getElementsAnnotatedWith(Headers::class.java)
     val bodyElements = roundEnv.getElementsAnnotatedWith(Body::class.java).filterNot { it.enclosingElement.toString().contains("copy") }.toMutableSet()
     val queryElements = roundEnv.getElementsAnnotatedWith(Query::class.java).filterNot { it.enclosingElement.toString().contains("copy") }.toMutableSet()
+    val siteElements = roundEnv.getElementsAnnotatedWith(Site::class.java).filterNot { it.enclosingElement.toString().contains("copy") }.toMutableSet()
 
-
-    //        outElementsAllLog(TAG_REQUEST, requestElements)
-    //        outElementsAllLog(TAG_HEADER, headersElements)
-    //        outElementsAllLog(TAG_BODY, bodyElements)
-    //        outElementsAllLog(TAG_QUERY, queryElements)
+    //    outElementsAllLog(TAG_REQUEST, requestElements)
+    //    outElementsAllLog(TAG_HEADER, headersElements)
+    //    outElementsAllLog(TAG_BODY, bodyElements)
+    //    outElementsAllLog(TAG_QUERY, queryElements)
+    //    outElementsAllLog(TAG_SITE, siteElements)
 
 
     //创建请求集合
     val requestDataList = mutableListOf<RequestData>()
 
     return requestDataList.apply {
-        requestElements.forEach { requestElement ->
+        for (requestElement in requestElements) {
             val requestAnt = requestElement.getAnnotation(Request::class.java)
-            val headerElements = headersElements.filterHeaderAntByRequestClass(requestElement)
-            val headers = headerElements.map { HeaderData(it.getAnnotation(Header::class.java).value, it.simpleName.toString()) }
             val requestClass = requestElement.simpleName.toString()
             val httpType = requestAnt.type
+
             val findBaseConfig = findBaseConfig(createServiceConfigList, requestAnt)
             val requestUrl = getRequestUrl(requestAnt, findBaseConfig)
+
+            //获取请求头
+            val headers = headersElements.getRequestHeaders(requestClass).map { HeaderData(it.getAnnotation(Header::class.java).value, it.simpleName.toString()) }
+
+            //获取固定headers请求头
+            val fixedHeaders = fixedHeadersElements.getFixedHeaders(requestElement)
+
+            //获取请求时序
+            val siteParamName = siteElements.getRequestSiteParamName(requestClass)
 
             //获取body相关参数
             val requestBodyData = getRequestBodyData(bodyElements, queryElements, requestElement)
 
-            //查找固定headers请求头
-            val fixedHeaders = getFixedHeaders(fixedHeadersElements, requestElement)
-
             //获取方法参数
             val methodParameters = getMethodParameters(requestElement, bodyElements, requestBodyData)
 
-            //获取get请求参数
-            val requestParameters: List<String> = getRequestParameters(methodParameters, requestAnt, headers, requestBodyData)
-            val requestData = RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData)
+            //获取请求参数
+            val requestParameters: List<String> = getRequestParameters(methodParameters, requestAnt, headers, requestBodyData, siteParamName)
+
+
+            val requestData = RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData, siteParamName)
             add(requestData)
 
             //sendNoteMsg("【RequestData】:$requestData")
@@ -63,11 +71,11 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
 
 /**
  * 获取固定Headers
- * @param fixedHeadersElements MutableSet<out Element>
+ * @receiver MutableSet<out Element>
  * @param requestElement Element
  * @return List<String>?
  */
-private fun getFixedHeaders(fixedHeadersElements: MutableSet<out Element>, requestElement: Element) = fixedHeadersElements.find { it.simpleName == requestElement.simpleName }?.getAnnotation(Headers::class.java)?.headers?.toList()
+private fun MutableSet<out Element>.getFixedHeaders(requestElement: Element) = find { it.simpleName == requestElement.simpleName }?.getAnnotation(Headers::class.java)?.headers?.toList()
 
 
 /**
@@ -111,7 +119,7 @@ private fun ViewModelProcessor.getMethodParameterByBodyKind(bodyElements: Mutabl
     if (filterBodyElements.isEmpty()) {
         sendBodyNotFoundErrorMsg(requestElement)
     } else {
-        filterBodyElements.forEach { bodyElement ->
+        for (bodyElement in filterBodyElements) {
             when (bodyElement.kind) {
                 ElementKind.CLASS -> {
                     return listOf(ParameterData(bodyElement.simpleName.toString().replaceFirstChar { it.lowercase(Locale.getDefault()) }, bodyElement.asType().toString()))
@@ -156,17 +164,33 @@ private fun getAllParameterByRequestClass(requestElement: Element): List<Paramet
  */
 private fun List<String>.filterRestParameters(restUrl: String): List<String> = restUrl.findRest(this)
 
+/**
+ * 获取当前请求类中@Site注解的参数名
+ * @receiver MutableSet<Element>
+ * @param requestClassName String
+ * @return String?
+ */
+private fun MutableSet<Element>.getRequestSiteParamName(requestClassName: String): String? {
+    val paramName = this.find { it.getRequestClassFromParamAnnotation() == requestClassName }?.simpleName
+    return paramName?.takeIf { it.isNotEmpty() }?.run { this.toString() }
+}
+
+/**
+ * 从注解为参数类型中获取请求类
+ * @receiver Element
+ */
+private fun Element.getRequestClassFromParamAnnotation(): String {
+    return this.enclosingElement.toString().removeWith("(", ")")
+}
 
 /**
  * 过滤注解参数
  * @receiver MutableSet<out Element>
- * @param requestElement Element 根据请求Class
+ * @param requestClassName Element 根据请求Class
  * @return List<Element>
  */
-private fun MutableSet<out Element>.filterHeaderAntByRequestClass(requestElement: Element): List<Element> {
-    return this.filter {
-        it.enclosingElement.toString().removeWith("(", ")") == requestElement.simpleName.toString()
-    }
+private fun MutableSet<out Element>.getRequestHeaders(requestClassName: String): List<Element> = filter {
+    it.getRequestClassFromParamAnnotation() == requestClassName
 }
 
 
@@ -177,9 +201,8 @@ private fun MutableSet<out Element>.filterHeaderAntByRequestClass(requestElement
  * @return List<Element>
  */
 private fun MutableSet<out Element>.filterBodyAntByRequestClass(requestElement: Element): List<Element> {
-
     //过滤为Parameter类型的body注解
-    val bodyForParamAnt = this.filterHeaderAntByRequestClass(requestElement)
+    val bodyForParamAnt = this.getRequestHeaders(requestElement.simpleName.toString())
     if (bodyForParamAnt.isNotEmpty()) return bodyForParamAnt
 
     //如果没找到，则查找为Class注解
@@ -194,8 +217,8 @@ private fun MutableSet<out Element>.filterBodyAntByRequestClass(requestElement: 
  */
 private fun getCurrentBodyElement(bodyElements: MutableSet<out Element>, requestElement: Element): Element? {
     return bodyElements.find {
-        if (it.kind == ElementKind.CLASS) it.simpleName == requestElement.simpleName else it.enclosingElement.toString().removeWith("(", ")") == requestElement.simpleName.toString()
-    } ?: run { //            sendBodyNotFoundErrorMsg(requestElement)
+        if (it.kind == ElementKind.CLASS) it.simpleName == requestElement.simpleName else it.getRequestClassFromParamAnnotation() == requestElement.simpleName.toString()
+    } ?: run {
         null
     }
 }
@@ -239,7 +262,7 @@ private fun getCurrentBodyType(bodyElement: Element): BodyType {
  * @param requestBodyData: String 根据BodyType过滤的对应注解的参数（@Body、@FormUrlEncoded）
  * @return List<String>
  */
-private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Request, headers: List<HeaderData>, requestBodyData: RequestBodyData?): List<String> {
+private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Request, headers: List<HeaderData>, requestBodyData: RequestBodyData?, siteParamName: String?): List<String> {
 
     //过滤headers参数
     val filterHeaderParameters = (parameters.map { it.parameterName } subtract headers.map { it.parameterName }).toList()
@@ -247,8 +270,8 @@ private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Re
     //过滤rest参数
     val filterRestParameters = filterHeaderParameters.filterRestParameters(requestAnt.urlString)
 
-    //过滤body或x_www_formUrlEncoded参数
-    return filterRestParameters.filter { it != requestBodyData?.jsonParameterName }
+    //过滤body或x_www_formUrlEncoded、时序参数
+    return filterRestParameters.filter { it != requestBodyData?.jsonParameterName && it != siteParamName }
 }
 
 /**
@@ -288,10 +311,11 @@ private fun ViewModelProcessor.getRequestBodyData(bodyElements: MutableSet<out E
  */
 private fun getCurrentBodyQueryMap(currentBodyElement: Element, queryElements: MutableSet<out Element>): Map<String, String> {
     val queryMap = mutableMapOf<String, String>()
-    queryElements.forEach { query -> //遍历当前Body相同类名的Query的属性值
-        if (currentBodyElement.asType().toString().contains(query.enclosingElement.toString().removeWith("(", ")"))) {
-            val queryAnt = query.getAnnotation(Query::class.java)
-            queryMap[queryAnt.value] = query.simpleName.toString()
+    //遍历当前Body相同类名的Query的属性值
+    for (queryElement in queryElements) {
+        if (currentBodyElement.asType().toString().contains(queryElement.enclosingElement.toString().removeWith("(", ")"))) {
+            val queryAnt = queryElement.getAnnotation(Query::class.java)
+            queryMap[queryAnt.value] = queryElement.simpleName.toString()
         }
     }
     return queryMap

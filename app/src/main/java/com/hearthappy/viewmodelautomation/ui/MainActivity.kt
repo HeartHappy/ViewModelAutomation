@@ -30,8 +30,7 @@ import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
 
 @BindLiveData("getVideoList", ReVideoList::class, ResVideoList::class)
 @BindStateFlow("getImages", ReImages::class, ResImages::class)
-
-@BindStateFlow("test") class MainActivity : BaseActivity() {
+class MainActivity: BaseActivity() {
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var viewBinding: ActivityMainBinding
 
@@ -45,15 +44,21 @@ import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
         viewBinding.apply {
             viewModelListener()
 
-            btnGetImages.setOnClickListener { viewModel.getImages(0, 5) }
+            btnGetImages.setOnClickListener {
+                viewModel.getImages(0, 5)
+            }
 
-            btnGetVideoList.setOnClickListener { viewModel.getVideoList(0, 2) }
+            btnGetVideoList.setOnClickListener {
+                progress.show()
+                viewModel.getVideoList(0, 2)
+            }
         }
     }
 
     private fun ActivityMainBinding.viewModelListener() {
 
         viewModel.getVideoListLiveData.observe(this@MainActivity) {
+            progress.hide()
             when (it) {
                 is Result.Success -> tvResult.showSucceedMsg(it.body.toString())
                 is Result.Failed -> tvResult.showFailedMsg(it)
@@ -66,10 +71,10 @@ import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
         lifecycleScope.launchWhenCreated {
             viewModel.getImagesStateFlow.collect {
                 when (it) {
-                    is RequestState.LOADING-> progress.show()
-                    is RequestState.SUCCEED -> tvResult.showSucceedMsg(it.body.toString(),progress)
-                    is RequestState.FAILED -> tvResult.showFailedMsg(it,progress)
-                    is RequestState.Throwable -> tvResult.showThrowableMsg(it,progress)
+                    is RequestState.LOADING -> progress.show()
+                    is RequestState.SUCCEED -> tvResult.showSucceedMsg(it.body.toString(), progress)
+                    is RequestState.FAILED -> tvResult.showFailedMsg(it, progress)
+                    is RequestState.Throwable -> tvResult.showThrowableMsg(it, progress)
                     else -> Unit
                 }
             }

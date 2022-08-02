@@ -7,6 +7,7 @@ const val TAG_HEADER = "@Header"
 const val TAG_BODY = "@Body"
 const val TAG_QUERY = "@Query"
 const val TAG_BASE_CONFIG = "@BaseConfig"
+const val TAG_SITE = "@Site"
 
 const val KAPT_KOTLIN_GENERATED = "kapt.kotlin.generated"
 const val APPLICATION_PKG = "android.app"

@@ -15,8 +15,7 @@ import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
 
 @AndroidViewModel
 
-@BindStateFlow("login", ReLogin::class, ResLogin::class)
-class LoginActivity: BaseActivity() {
+@BindStateFlow("login", ReLogin::class, ResLogin::class) class LoginActivity: BaseActivity() {
 
     private lateinit var viewBinding: ActivityLoginBinding
 
