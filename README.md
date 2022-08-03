@@ -1,6 +1,16 @@
+[![](https://jitpack.io/v/HeartHappy/viewmodelautomation.svg)](https://jitpack.io/#HeartHappy/viewmodelautomation)
+
 ## 自动生成ViewModel、网络请求框架
 
 #### 一、项目地址：[Github](https://github.com/HeartHappy/ViewModelAutomation)
+
+- 框架优势：通过提供的注解自动生成ViewModel层的LiveData、StateFlow，以及网络请求。节省您大量的开发时间
+- 交流方式： 
+   -   1、 Q群：570377751
+   -   2、欢迎使用issues提建议或bug
+   -   3、欢迎Star以兹鼓励
+
+  
 
 #### 二、集成
 
@@ -37,11 +47,11 @@ dependencies {
     //ktor网络框架
     implementation("io.ktor:ktor-client-core:1.6.0")
     //ktor扩展库
-    implementation("com.github.hearthappy.viewmodelautomation:ktor-expand:2.0.4")
+    implementation("com.github.hearthappy.viewmodelautomation:ktor-expand:2.0.6")
     //注解库
-    compileOnly("com.github.hearthappy.viewmodelautomation:annotations:2.0.4")
+    compileOnly("com.github.hearthappy.viewmodelautomation:annotations:2.0.6")
     //处理注解自动生成库
-    kapt("com.github.hearthappy.viewmodelautomation:processor:2.0.4")
+    kapt("com.github.hearthappy.viewmodelautomation:processor:2.0.6")
 }
 ```
 
