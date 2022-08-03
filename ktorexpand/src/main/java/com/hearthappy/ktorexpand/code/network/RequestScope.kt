@@ -28,9 +28,9 @@ suspend inline fun <reified R> requestScope(io: () -> HttpResponse, crossinline 
 
 sealed class RequestState<out T> {
     object LOADING: RequestState<Nothing>()
-    data class SUCCEED<T>(val body: T, val response: HttpResponse, val site: Int = InSitu): RequestState<T>()
-    data class FAILED(val failedBody: FailedBody, val site: Int = InSitu): RequestState<Nothing>()
-    data class Throwable(val throwable: kotlin.Throwable, val site: Int = InSitu): RequestState<Nothing>()
+    data class SUCCEED<T>(val body: T, val response: HttpResponse, val order: Int = InSitu): RequestState<T>()
+    data class FAILED(val failedBody: FailedBody, val order: Int = InSitu): RequestState<Nothing>()
+    data class Throwable(val throwable: kotlin.Throwable, val order: Int = InSitu): RequestState<Nothing>()
     object DEFAULT: RequestState<Nothing>()
 }
 

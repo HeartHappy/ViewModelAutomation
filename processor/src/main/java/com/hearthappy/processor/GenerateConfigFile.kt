@@ -21,6 +21,13 @@ internal fun getServiceConfigList(serviceElements: Set<Element>): List<ServiceCo
 
 internal fun ViewModelProcessor.generateServiceConfigFile(createServiceConfigList: List<ServiceConfigData>, generatedSource: String) {
     if (createServiceConfigList.isNotEmpty()) {
+        if(createServiceConfigList.size>1){
+            if(createServiceConfigList.map { it.key }.toSet().size!=createServiceConfigList.size){
+                sendErrorMsg("@ServiceConfig key must be unique, please set your ServiceConfig key")
+                return
+            }
+        }
+        sendNoteMsg("@Service fileName:ServiceConfig,@ServiceConfig count:${createServiceConfigList.size}")
         val fileName = "ServiceConfig"
         val file = FileSpec.builder(GENERATE_CONFIG_PKG, fileName)
         val defaultConfigClassName = ClassName(NETWORK_PKG, NETWORK_DEFAULT_CONFIG)
@@ -28,6 +35,7 @@ internal fun ViewModelProcessor.generateServiceConfigFile(createServiceConfigLis
             val generateConfigProperty = generateDelegatePropertySpec(baseConfig.key, defaultConfigClassName, createDefaultConfig(baseConfig), KModifier.PRIVATE)
             file.addProperty(generateConfigProperty)
             file.addFunction(FunSpec.builder(baseConfig.key).receiver(application).returns(defaultConfigClassName).addStatement("return ${baseConfig.key}").build())
+            sendNoteMsg("==================> Create function: ${baseConfig.key}")
         }
         file.build().writeTo(File(generatedSource))
         sendNoteMsg("==================> Create a $fileName file and write the service configuration to the file")

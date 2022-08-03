@@ -12,5 +12,5 @@ data class RequestData(
     val methodParameters: List<ParameterData>,
     val requestParameters: List<String>,
     val requestBodyData: RequestBodyData,
-    val site:String?
+    val order:String?
 )

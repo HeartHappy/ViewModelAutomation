@@ -44,7 +44,7 @@ internal fun generateFunctionByStateFlow(it: BindStateFlow, requestData: Request
 }
 
 private fun addSite(requestData: RequestData?): String {
-    return requestData?.run { site }?.takeIf { it.isNotBlank() }?.run { ",$this" } ?: ""
+    return requestData?.run { order }?.takeIf { it.isNotBlank() }?.run { ",$this" } ?: ""
 }
 
 private fun FunSpec.Builder.generateMethodRequestScope(requestData: RequestData?, viewModelParam: ViewModelData, requiredImport: MutableList<String>) { //没有@Request注解的请求

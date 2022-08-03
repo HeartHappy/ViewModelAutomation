@@ -1,8 +1,6 @@
 package com.hearthappy.viewmodelautomation.model.request
 
-import com.hearthappy.annotations.Body
-import com.hearthappy.annotations.Http
-import com.hearthappy.annotations.Request
+import com.hearthappy.annotations.*
 
 
 /**
@@ -11,6 +9,7 @@ import com.hearthappy.annotations.Request
  * @property size Int
  * @constructor
  */
+@Order
 @Request(urlString = "/getImages") data class ReImages(val page: Int, val size: Int)
 
 

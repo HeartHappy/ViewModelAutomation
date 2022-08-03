@@ -42,7 +42,7 @@ class MainActivity: BaseActivity() {
             viewModelListener()
 
             btnGetImages.setOnClickListener {
-                viewModel.getImages(0, 5)
+                viewModel.getImages(0, 5,1)
             }
 
             btnGetVideoList.setOnClickListener {

@@ -14,9 +14,9 @@ import kotlinx.coroutines.withContext
  */
 sealed class Result<out T: Any> {
 
-    data class Success<out T: Any>(val body: T, val site: Int = InSitu): Result<T>()
-    data class Failed(val failedBody: FailedBody, val site: Int = InSitu): Result<Nothing>()
-    data class Throwable(val throwable: kotlin.Throwable, val site: Int = InSitu): Result<Nothing>()
+    data class Success<out T: Any>(val body: T, val order: Int = InSitu): Result<T>()
+    data class Failed(val failedBody: FailedBody, val order: Int = InSitu): Result<Nothing>()
+    data class Throwable(val throwable: kotlin.Throwable, val order: Int = InSitu): Result<Nothing>()
 
     override fun toString(): String {
         return when (this) {
