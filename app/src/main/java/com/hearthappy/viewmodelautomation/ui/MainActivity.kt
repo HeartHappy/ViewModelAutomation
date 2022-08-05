@@ -12,9 +12,11 @@ import com.hearthappy.ktorexpand.code.network.Result
 import com.hearthappy.viewmodelautomation.databinding.ActivityMainBinding
 import com.hearthappy.viewmodelautomation.model.request.ReImages
 import com.hearthappy.viewmodelautomation.model.request.ReVideoList
+import com.hearthappy.viewmodelautomation.model.request.ReqDownloadFile
 import com.hearthappy.viewmodelautomation.model.response.ResImages
 import com.hearthappy.viewmodelautomation.model.response.ResVideoList
 import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
+import java.io.File
 
 
 /**
@@ -29,6 +31,8 @@ import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
 
 @BindLiveData("getVideoList", ReVideoList::class, ResVideoList::class)
 @BindStateFlow("getImages", ReImages::class, ResImages::class)
+
+@BindStateFlow("getDownloadFile", ReqDownloadFile::class, File::class)
 class MainActivity: BaseActivity() {
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var viewBinding: ActivityMainBinding
@@ -42,7 +46,7 @@ class MainActivity: BaseActivity() {
             viewModelListener()
 
             btnGetImages.setOnClickListener {
-                viewModel.getImages(0, 5,1)
+                viewModel.getImages(0, 5, 1)
             }
 
             btnGetVideoList.setOnClickListener {

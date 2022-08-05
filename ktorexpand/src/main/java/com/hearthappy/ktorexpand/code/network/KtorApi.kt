@@ -2,41 +2,13 @@ package com.hearthappy.ktorexpand.code.network
 
 import com.google.gson.Gson
 import io.ktor.client.*
+import io.ktor.client.content.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlin.system.measureTimeMillis
-
-suspend inline fun login() = ktorClient().use {
-    it.get("https://ktor.io/") {
-        header(HttpHeaders.ContentType, ContentType.Application.Json)
-        parameter("price", "asc")
-    }
-}
-
-fun main() = runBlocking {
-    val measureTimeMillis = measureTimeMillis {
-        for (i in 1..10) {/*launch {
-                val login = login()
-                println("requestTime:${login.version}")
-            }*/
-            launch {
-                requestScope<String>(io = { login() }, onSucceed = { _, http ->
-                    println("requestTime:${http.requestTime}")
-                }, onFailure = {}, onThrowable = {}, Dispatchers.Default)
-            }
-            delay(200)
-        }
-    }
-
-    println("end...:$measureTimeMillis")
-}
 
 
 /**
@@ -79,6 +51,23 @@ suspend inline fun HttpClient.deleteRequest(url: String, headers: List<Header>?,
 }
 
 /**
+ * 下载请求
+ * @param httpType Int
+ * @param url String
+ * @param headers List<Header>?
+ * @param listener SuspendFunction2<[@kotlin.ParameterName] Long, [@kotlin.ParameterName] Long, Unit>?
+ * @param defaultConfig DefaultConfig
+ * @return HttpResponse
+ */
+suspend fun sendKtorDownload(httpType: Int = GET, url: String, headers: List<Header>? = null, listener: ProgressListener = { _, _ -> }, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
+    when (httpType) {
+        GET -> it.getRequest(url, headers) { onDownload(listener) }
+        POST -> it.postRequest(url, headers) { onDownload(listener) }
+        else -> throw RuntimeException("KtorApi not implemented yet，The current RequestType value is $httpType")
+    }
+}
+
+/**
  *
  * @param httpType Int
  * @param bodyType Int
@@ -109,7 +98,9 @@ suspend inline fun sendKtorRequest(httpType: Int = GET, bodyType: Int = NONE, ur
                 FormData -> it.submitForm(url = url, Parameters.build(appends)) {
                     handleHeaders(headers)
                 }
-                FormUrlEncoded -> it.postRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
+                FormUrlEncoded -> it.postRequest(url, headers) {
+                    setBody(FormDataContent(Parameters.build(appends)))
+                }
                 else -> throw RuntimeException("post other error")
             }
         }
@@ -125,14 +116,18 @@ suspend inline fun sendKtorRequest(httpType: Int = GET, bodyType: Int = NONE, ur
                 FormData -> it.submitForm(url = url, Parameters.build(appends)) {
                     handleHeaders(headers)
                 }
-                FormUrlEncoded -> it.patchRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
+                FormUrlEncoded -> it.patchRequest(url, headers) {
+                    setBody(FormDataContent(Parameters.build(appends)))
+                }
                 else -> throw RuntimeException("patch other error")
             }
         }
         DELETE -> {
             when (bodyType) {
                 NONE -> it.deleteRequest(url, headers) { parameters() }
-                TEXT -> it.deleteRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
+                TEXT -> it.deleteRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) {
+                    setBody(Gson().toJson(requestBody))
+                }
                 JSON -> it.deleteRequest(url, headers) { setBody(requestBody) }
                 FormData -> it.submitForm(url = url, Parameters.build(appends)) {
                     handleHeaders(headers)
@@ -147,6 +142,7 @@ suspend inline fun sendKtorRequest(httpType: Int = GET, bodyType: Int = NONE, ur
             throw RuntimeException("KtorApi not implemented yet，The current RequestType value is $httpType")
         }
     }
+
 }
 
 
@@ -161,11 +157,14 @@ const val DELETE = 4
 const val NONE = 101
 const val TEXT = 102
 const val JSON = 103
-const val HTML = 104
-const val XML = 105
+
+//const val HTML = 104
+//const val XML = 105
 const val FormData = 106
 const val FormUrlEncoded = 107
-const val MultipartFormData = 108
+
+//const val MultipartFormData = 108
+//const val Streaming = 109
 
 const val EmptyString = ""
 const val InSitu = 0

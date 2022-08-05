@@ -21,7 +21,7 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
     val fixedHeadersElements = roundEnv.getElementsAnnotatedWith(Headers::class.java)
     val bodyElements = roundEnv.getElementsAnnotatedWith(Body::class.java).filterCopy()
     val queryElements = roundEnv.getElementsAnnotatedWith(Query::class.java).filterCopy()
-    val orderElements = roundEnv.getElementsAnnotatedWith(Order::class.java)
+    val orderElements = roundEnv.getElementsAnnotatedWith(Order::class.java) //    val streamingElements = roundEnv.getElementsAnnotatedWith(Streaming::class.java)
 
     //    outElementsAllLog(TAG_REQUEST, requestElements)
     //    outElementsAllLog(TAG_HEADER, headersElements)
@@ -54,11 +54,13 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
             //获取请求秩序
             val order = orderElements.getRequestClassFromClassAnnotation(requestClass)?.run { "order" }
 
+            //获取流媒体
+
             //获取body相关参数
             val requestBodyData = getRequestBodyData(bodyElements, queryElements, requestElement)
 
             //获取方法参数
-            val methodParameters = getMethodParameters(requestElement, bodyElements, requestBodyData,order)
+            val methodParameters = getMethodParameters(requestElement, bodyElements, requestBodyData, order)
 
             //获取请求参数
             val requestParameters: List<String> = getRequestParameters(methodParameters, requestAnt, headers, requestBodyData, order)
@@ -92,25 +94,19 @@ private fun MutableSet<out Element>.getFixedHeaders(requestElement: Element) = f
 private fun ViewModelProcessor.getMethodParameters(requestElement: Element, bodyElements: MutableSet<out Element>, requestBodyData: RequestBodyData?, order: String?): List<ParameterData> {
     val parameters = mutableListOf<ParameterData>()
     when (requestBodyData?.bodyType) {
-        BodyType.NONE -> {
-            parameters.addAll(getAllParameterByRequestClass(requestElement))
-        }
+        BodyType.NONE -> parameters.addAll(getAllParameterByRequestClass(requestElement))
         BodyType.TEXT -> {
         }
-        BodyType.JSON, BodyType.FormUrlEncoded -> {
-            parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
-        }
+        BodyType.JSON, BodyType.FormUrlEncoded -> parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
         BodyType.HTML -> {
         }
         BodyType.XML -> {
         }
-        BodyType.FORM_DATA -> {
-            parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
-        }
+        BodyType.FORM_DATA -> parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
         else -> {
         }
     }
-    order?.let { parameters.add(ParameterData(it,"Int")) }
+    order?.let { parameters.add(ParameterData(it, "Int")) }
     return parameters
 }
 
@@ -171,17 +167,6 @@ private fun getAllParameterByRequestClass(requestElement: Element): List<Paramet
  */
 private fun List<String>.filterRestParameters(restUrl: String): List<String> = restUrl.findRest(this)
 
-
-/**
- * 获取当前请求类中@Site注解的参数名
- * @receiver MutableSet<Element>
- * @param requestClassName String
- * @return String?
- */
-private fun MutableSet<Element>.getRequestAnnotationParamName(requestClassName: String): String? {
-    val paramName = this.find { it.getRequestClassFromParamAnnotation() == requestClassName }?.simpleName
-    return paramName?.takeIf { it.isNotEmpty() }?.run { this.toString() }
-}
 
 /**
  * 从注解为Class类型中获取请求类
@@ -279,16 +264,16 @@ private fun getCurrentBodyType(bodyElement: Element): BodyType {
  * @param requestBodyData: String 根据BodyType过滤的对应注解的参数（@Body、@FormUrlEncoded）
  * @return List<String>
  */
-private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Request, headers: List<HeaderData>, requestBodyData: RequestBodyData?, siteParamName: String?): List<String> {
+private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Request, headers: List<HeaderData>, requestBodyData: RequestBodyData?, orderParamName: String?): List<String> {
 
     //过滤headers参数
-    val filterHeaderParameters = (parameters.map { it.parameterName } subtract headers.map { it.parameterName }).toList()
+    val filterHeaderParameters = (parameters.map { it.parameterName } subtract headers.map { it.parameterName }.toSet()).toList()
 
     //过滤rest参数
     val filterRestParameters = filterHeaderParameters.filterRestParameters(requestAnt.urlString)
 
     //过滤body或x_www_formUrlEncoded、时序参数
-    return filterRestParameters.filter { it != requestBodyData?.jsonParameterName && it != siteParamName }
+    return filterRestParameters.filter { it != requestBodyData?.jsonParameterName && it != orderParamName }
 }
 
 /**
@@ -299,7 +284,7 @@ private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Re
  */
 private fun getRequestUrl(requestAnt: Request, findServiceConfig: ServiceConfigData?): String {
     val url = requestAnt.urlString.asRest("{", "}") //处理全局URL
-    return findServiceConfig?.run { "\${app.defaultConfig().baseURL}".plus(url) } ?: url
+    return findServiceConfig?.run { "\${app.$key().baseURL}".plus(url) } ?: url
 }
 
 private fun findBaseConfig(serviceConfigData: List<ServiceConfigData>, requestAnt: Request): ServiceConfigData? {

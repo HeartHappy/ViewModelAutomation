@@ -1,6 +1,9 @@
 package com.hearthappy.viewmodelautomation.model.request
 
-import com.hearthappy.annotations.*
+import com.hearthappy.annotations.Body
+import com.hearthappy.annotations.Http
+import com.hearthappy.annotations.Order
+import com.hearthappy.annotations.Request
 
 
 /**
@@ -9,8 +12,7 @@ import com.hearthappy.annotations.*
  * @property size Int
  * @constructor
  */
-@Order
-@Request(urlString = "/getImages") data class ReImages(val page: Int, val size: Int)
+@Order @Request(urlString = "/getImages") data class ReImages(val page: Int, val size: Int)
 
 
 /**
@@ -50,3 +52,8 @@ data class ReSendVerificationCode(val mail: String)
  */
 @Request(Http.POST, urlString = "/register") @Body
 data class ReRegister(val account: String, val code: String, val password: String)
+
+
+//@Streaming
+@Request(Http.GET, urlString = "/fs/{fileName}", serviceKey = "download")
+data class ReqDownloadFile(val fileName:String)

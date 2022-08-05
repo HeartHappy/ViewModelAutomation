@@ -30,6 +30,7 @@ const val NETWORK_REQUEST_STATE = "RequestState"
 const val NETWORK_LIVEDATA_RESULT = "Result"
 const val NETWORK_DEFAULT_CONFIG = "DefaultConfig"
 const val NETWORK_REQUEST = "sendKtorRequest"
+const val NETWORK_DOWNLOAD = "sendKtorDownload"
 const val NETWORK_CONTENT_TYPE = "ContentType"
 const val NETWORK_HEADER = "Header"
 

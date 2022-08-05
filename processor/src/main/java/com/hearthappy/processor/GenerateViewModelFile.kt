@@ -92,7 +92,7 @@ internal fun ViewModelProcessor.generateFileAndWrite(viewModelClassName: String,
  */
 private fun getFinallyRequiredImport(collectRequiredImport: List<String>): List<String> {
     return collectRequiredImport.isNotEmpty().takeIf { it }?.run {
-        collectRequiredImport.plus(NETWORK_REQUEST_SCOPE).plus(NETWORK_REQUEST).toSet().toList()
+        collectRequiredImport.plus(NETWORK_REQUEST_SCOPE).toSet().toList()
     } ?: run { collectRequiredImport }
 }
 

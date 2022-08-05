@@ -56,13 +56,11 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:${lifecycleVersion}"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:${lifecycleVersion}"
 
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
+
 
     //ktor所需
     implementation("io.ktor:ktor-client-core:$ktorVersion")
-//    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-
-
     compileOnly project(path: ':annotations')
     kapt project(path: ':processor')
     implementation project(path: ':ktorexpand')

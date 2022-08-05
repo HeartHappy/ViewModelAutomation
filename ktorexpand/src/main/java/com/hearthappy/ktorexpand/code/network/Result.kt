@@ -3,10 +3,14 @@ package com.hearthappy.ktorexpand.code.network
 import com.google.gson.GsonBuilder
 import io.ktor.client.call.*
 import io.ktor.client.statement.*
+import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainCoroutineDispatcher
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 
 /**5
  * A generic class that holds a value with its loading status.
@@ -29,32 +33,51 @@ sealed class Result<out T: Any> {
 
 val succeedCode = 200..299
 
-suspend inline fun <reified R> requestHandler(result: kotlin.Result<HttpResponse>, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit, dispatcher: CoroutineDispatcher) {
+suspend inline fun <reified R> resultHandler(result: kotlin.Result<HttpResponse>, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit, dispatcher: CoroutineDispatcher, outFile: File? = null, fileOutputStream: FileOutputStream? = null) {
     result.apply {
         result.exceptionOrNull()?.let(onThrowable) ?: let {
             getOrNull()?.let { response ->
-                responseHandler(response, dispatcher, onSucceed, onFailure)
+                responseHandler(response, dispatcher, onSucceed, onFailure, outFile, fileOutputStream)
             }
         }
     }
 }
 
-suspend inline fun <reified R> requestHandler(crossinline io: suspend () -> HttpResponse, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit, dispatcher: CoroutineDispatcher) {
+suspend inline fun <reified R> requestHandler(crossinline io: suspend () -> HttpResponse, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit, dispatcher: CoroutineDispatcher, outFile: File? = null, fileOutputStream: FileOutputStream? = null) {
     try {
         val response = io()
-        responseHandler(response, dispatcher, onSucceed, onFailure)
+        responseHandler(response, dispatcher, onSucceed, onFailure, outFile, fileOutputStream)
     } catch (e: Throwable) {
         withMainCoroutine(dispatcher) { onThrowable(e) }
     }
 }
 
-suspend inline fun <reified R> responseHandler(response: HttpResponse, dispatcher: CoroutineDispatcher, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit) {
+suspend inline fun <reified R> responseHandler(response: HttpResponse, dispatcher: CoroutineDispatcher, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit, outFile: File?, fileOutputStream: FileOutputStream?) {
     if (response.status.value in succeedCode) {
         println("HttpClient---> Result onSucceed:${response.status.value},Class:${R::class.java}")
-        when {
-            isString<R>() -> {
+        when (R::class) {
+            String::class -> {
                 val bodyString = response.bodyAsText()
                 withMainCoroutine(dispatcher) { onSucceed(bodyString as R, response) }
+            }
+            InputStream::class -> {
+                val inputStream = response.bodyAsChannel().toInputStream()
+                withMainCoroutine(dispatcher) { onSucceed(inputStream as R, response) }
+            }
+            File::class -> {
+                outFile?.apply {
+                    response.bodyAsChannel().toInputStream().copyTo(this.outputStream())
+                    withMainCoroutine(dispatcher) { onSucceed(outFile as R, response) }
+                } ?: run {
+                    val failedBody = FailedBody(response.status.value, "No output file found, please add the output file as a parameter in the declaration @Request")
+                    withMainCoroutine(dispatcher) { onFailure(failedBody) }
+                }
+            }
+            FileOutputStream::class -> {
+                fileOutputStream?.apply {
+                    response.bodyAsChannel().toInputStream().copyTo(this)
+                    withMainCoroutine(dispatcher) { onSucceed(this as R, response) }
+                }
             }
             else -> { //返回转换后对象类型
                 val body = response.body<R>()
@@ -77,11 +100,6 @@ suspend fun withMainCoroutine(dispatcher: CoroutineDispatcher, block: () -> Unit
         else -> block()
     }
 }
-
-inline fun <reified R> isString() = rIsString<R>()
-
-inline fun <reified R> rIsString() = R::class.java.name == String::class.java.name
-
 
 data class FailedBody(val statusCode: Int, val text: String?)
 

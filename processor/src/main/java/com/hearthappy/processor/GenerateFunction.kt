@@ -4,10 +4,7 @@ import com.hearthappy.annotations.BindLiveData
 import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.annotations.BodyType
 import com.hearthappy.annotations.Http
-import com.hearthappy.processor.common.KTOR_CLIENT_RESPONSE_PKG
-import com.hearthappy.processor.common.NETWORK_HEADER
-import com.hearthappy.processor.common.NETWORK_REQUEST_SCOPE
-import com.hearthappy.processor.common.NETWORK_REQUEST_STATE
+import com.hearthappy.processor.common.*
 import com.hearthappy.processor.model.HeaderData
 import com.hearthappy.processor.model.RequestData
 import com.hearthappy.processor.model.ServiceConfigData
@@ -22,9 +19,11 @@ internal fun generateFunctionByLiveData(it: BindLiveData, requestData: RequestDa
     val function = FunSpec.builder(it.methodName).apply {
         generateMethodParametersSpec(requestData)
         generateMethodRequestScope(requestData, viewModelParam, requiredImport)
-        addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Failed(it${addSite(requestData)}))},")
-        addStatement("onSucceed = { body, _ ->${viewModelParam.priPropertyName}.postValue(Result.Success(body${addSite(requestData)}))},")
-        addStatement("onThrowable = { ${viewModelParam.priPropertyName}.postValue(Result.Throwable(it${addSite(requestData)}))}")
+        addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Failed(it${addOrder(requestData)}))},")
+        addStatement("onSucceed = { body, _ ->${viewModelParam.priPropertyName}.postValue(Result.Success(body${addOrder(requestData)}))},")
+        addStatement("onThrowable = { ${viewModelParam.priPropertyName}.postValue(Result.Throwable(it${addOrder(requestData)}))}")
+        val outFile = requestData?.takeIf { it.responseClass == "File" }?.run { ",outFile=outFile" }
+        outFile?.apply { addStatement(this) }
         addStatement(")")
     }
     classBuilder.addFunction(function.build())
@@ -35,23 +34,32 @@ internal fun generateFunctionByStateFlow(it: BindStateFlow, requestData: Request
         generateMethodParametersSpec(requestData)
         addStatement("${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.LOADING")
         generateMethodRequestScope(requestData, viewModelParam, requiredImport)
-        addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.FAILED(it${addSite(requestData)}) },")
-        addStatement("onSucceed = { body,response-> ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.SUCCEED(body,response${addSite(requestData)}) },")
-        addStatement("onThrowable = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.Throwable(it${addSite(requestData)}) }")
+        addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.FAILED(it${addOrder(requestData)}) },")
+        addStatement("onSucceed = { body,response-> ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.SUCCEED(body,response${addOrder(requestData)}) },")
+        addStatement("onThrowable = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.Throwable(it${addOrder(requestData)}) }") //添加输出文件
+        val outFile = requestData?.takeIf { it.responseClass == "File" }?.run { ",outFile=outFile" }
+        outFile?.apply { addStatement(this) }
         addStatement(")")
     }
     classBuilder.addFunction(function.build())
 }
 
-private fun addSite(requestData: RequestData?): String {
+private fun addOrder(requestData: RequestData?): String {
     return requestData?.run { order }?.takeIf { it.isNotBlank() }?.run { ",$this" } ?: ""
 }
+
 
 private fun FunSpec.Builder.generateMethodRequestScope(requestData: RequestData?, viewModelParam: ViewModelData, requiredImport: MutableList<String>) { //没有@Request注解的请求
     requestData?.apply {
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = {")
         addRequiredImport(requiredImport)
-        generateRequestApi(http, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
+        if (responseClass == "File") {
+            requiredImport.add(NETWORK_DOWNLOAD)
+            generateRequestApi("sendKtorDownload", http, url = url, headers = headers, fixedHeaders = fixedHeaders, serviceConfigData = serviceConfigData)
+        } else {
+            requiredImport.add(NETWORK_REQUEST)
+            generateRequestApi("sendKtorRequest", http, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
+        }
         addStatement("},")
     } ?: let {
         requiredImport.add(NETWORK_REQUEST_SCOPE)
@@ -65,9 +73,9 @@ private fun RequestData.addRequiredImport(requiredImport: MutableList<String>) {
     if (headers.isNotEmpty() || fixedHeaders?.isNotEmpty() == true) requiredImport.add(NETWORK_HEADER)
 }
 
-private fun FunSpec.Builder.generateRequestApi(http: Http, bodyType: BodyType, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?) {
+private fun FunSpec.Builder.generateRequestApi(sendApi: String, http: Http, bodyType: BodyType = BodyType.NONE, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?) {
 
-    addStatement("sendKtorRequest(")
+    addStatement("$sendApi(")
     if (requestBody != Http.GET) addStatement("httpType=${http}")
     if (bodyType != BodyType.NONE) addStatement(",bodyType=${bodyType}")
 

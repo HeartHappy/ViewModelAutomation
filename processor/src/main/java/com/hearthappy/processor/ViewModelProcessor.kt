@@ -22,27 +22,27 @@ import javax.lang.model.element.TypeElement
  * FunSpec.addTypeVariable(TypeVariableName("T")) : 函数泛型 ：fun <T> add()
  * FunSpec.addComment("AA"):为函数尾部添加注释  fun(){}  //AA
  * FunSpec.addKdoc("BB"):为函数顶部添加文本注释 /**BB*/ fun(){}
- *
- * 1、支持设置超时
- *
- * annotation:
- * sendNoteMsg(element.enclosedElements.toList().toString())
- * sendNoteMsg(element.enclosingElement.toString()) //获取包名：com.hearthappy.viewmodelautomation.model
- * sendNoteMsg(element.kind.name) //获取类型：CLASS
- * sendNoteMsg(element.simpleName.toString()) //获取类名
- * sendNoteMsg(element.asType().toString()) //获取类的全相对路径：com.hearthappy.viewmodelautomation.model.ReLogin
  */
-@AutoService(Processor::class) class ViewModelProcessor: AbstractProcessor() { //导包所需
+@AutoService(Processor::class) class ViewModelProcessor : AbstractProcessor() { //导包所需
 
     private var startingTime = 0L
     override fun getSupportedSourceVersion(): SourceVersion = SourceVersion.latestSupported()
 
-    override fun getSupportedAnnotationTypes(): MutableSet<String> = mutableSetOf(AndroidViewModel::class.java.name, BindLiveData::class.java.name, BindStateFlow::class.java.name, Request::class.java.name, Body::class.java.name, Service::class.java.name, ServiceConfig::class.java.name)
+    override fun getSupportedAnnotationTypes(): MutableSet<String> = mutableSetOf(
+        AndroidViewModel::class.java.name,
+        BindLiveData::class.java.name,
+        BindStateFlow::class.java.name,
+        Request::class.java.name,
+        Body::class.java.name,
+        Service::class.java.name,
+        ServiceConfig::class.java.name
+    )
 
     override fun process(
         annotations: MutableSet<out TypeElement>?,
         roundEnv: RoundEnvironment?,
-    ): Boolean = roundEnv?.processingOver()?.takeIf { it }?.apply { generatedFinish() } ?: processAnnotations(roundEnv)
+    ): Boolean = roundEnv?.processingOver()?.takeIf { it }
+        ?.apply { generatedFinish() } ?: processAnnotations(roundEnv)
 
     private fun processAnnotations(
         roundEnv: RoundEnvironment?,
@@ -52,11 +52,14 @@ import javax.lang.model.element.TypeElement
                 return sendErrorMsg("Can't find target source.")
             }
             startingTime = System.currentTimeMillis()
-            val androidViewModelElements = getElementsAnnotatedWith(AndroidViewModel::class.java) //            return handlerAndroidViewModelAnt(androidViewModelElements, this)
+            val androidViewModelElements =
+                getElementsAnnotatedWith(AndroidViewModel::class.java) //            return handlerAndroidViewModelAnt(androidViewModelElements, this)
             val serviceElements = getElementsAnnotatedWith(Service::class.java)
             val serviceConfigList = getServiceConfigList(serviceElements)
             generateServiceConfigFile(serviceConfigList, generatedSource)
-            generateAndroidViewModelFile(this, androidViewModelElements, generatedSource, serviceConfigList)
+            generateAndroidViewModelFile(
+                this, androidViewModelElements, generatedSource, serviceConfigList
+            )
         } ?: sendErrorMsg("RoundEnvironment is null hence skip the process.")
     }
 
@@ -76,9 +79,7 @@ import javax.lang.model.element.TypeElement
 
 
     @Suppress("unused") fun outElementsAllLog(tag: Any, elements: MutableSet<out Element>) {
-        for (element in elements) {
-            outElementLog(tag, element)
-        }
+        for (element in elements) outElementLog(tag, element)
     }
 
     fun outElementLog(tag: Any, element: Element?) {
