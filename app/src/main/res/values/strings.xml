@@ -13,4 +13,5 @@
     <string name="please_enter_password">请输入密码</string>
     <string name="sign_up">Sign up</string>
     <string name="other">Other</string>
+    <string name="download_file">下载文件</string>
 </resources>

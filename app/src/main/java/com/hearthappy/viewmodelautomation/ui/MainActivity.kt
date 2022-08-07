@@ -1,6 +1,9 @@
 package com.hearthappy.viewmodelautomation.ui
 
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.util.Log
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.hearthappy.annotations.AndroidViewModel
@@ -17,8 +20,6 @@ import com.hearthappy.viewmodelautomation.model.response.ResImages
 import com.hearthappy.viewmodelautomation.model.response.ResVideoList
 import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
 import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
 
 
 /**
@@ -32,7 +33,7 @@ import java.io.InputStream
 @AndroidViewModel
 @BindLiveData("getVideoList", ReVideoList::class, ResVideoList::class)
 @BindStateFlow("getImages", ReImages::class, ResImages::class)
-@BindStateFlow("getDownloadFile", ReqDownloadFile::class, InputStream::class)
+@BindStateFlow("getDownloadFile", ReqDownloadFile::class, File::class)
 class MainActivity : BaseActivity() {
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var viewBinding: ActivityMainBinding
@@ -53,6 +54,16 @@ class MainActivity : BaseActivity() {
                 progress.show()
                 viewModel.getVideoList(0, 2)
             }
+
+            btnDownloadFile.setOnClickListener {
+                val file =
+                    File("${Environment.getExternalStorageDirectory().path}/DCIM/test.png")
+                viewModel.getDownloadFile("1.png", file) { current, total ->
+                    downloadProgressBar.max = total.toInt()
+                    downloadProgressBar.progress = current.toInt()
+                    Log.d(TAG, "onCreate: current:$current,total:$total")
+                }
+            }
         }
     }
 
@@ -64,8 +75,7 @@ class MainActivity : BaseActivity() {
                 is Result.Success   -> tvResult.showSucceedMsg(it.body.toString())
                 is Result.Failed    -> tvResult.showFailedMsg(it)
                 is Result.Throwable -> tvResult.showThrowableMsg(it)
-                else                -> {
-                }
+                else                -> Unit
             }
         }
 
@@ -80,5 +90,23 @@ class MainActivity : BaseActivity() {
                 }
             }
         }
+        lifecycleScope.launchWhenCreated {
+            viewModel.getDownloadFileStateFlow.collect {
+                when (it) {
+                    is RequestState.LOADING   -> downloadProgressBar.show()
+                    is RequestState.SUCCEED   -> {
+                        downloadProgressBar.hide()
+                        ivShowFile.setImageURI(Uri.fromFile(it.body))
+                    }
+                    is RequestState.FAILED    -> tvResult.showFailedMsg(it, downloadProgressBar)
+                    is RequestState.Throwable -> tvResult.showThrowableMsg(it, downloadProgressBar)
+                    else                      -> Unit
+                }
+            }
+        }
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }
