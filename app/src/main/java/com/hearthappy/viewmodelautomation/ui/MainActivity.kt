@@ -17,6 +17,8 @@ import com.hearthappy.viewmodelautomation.model.response.ResImages
 import com.hearthappy.viewmodelautomation.model.response.ResVideoList
 import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 
 
 /**
@@ -28,12 +30,10 @@ import java.io.File
  * @property viewModel MainViewModel
  */
 @AndroidViewModel
-
 @BindLiveData("getVideoList", ReVideoList::class, ResVideoList::class)
 @BindStateFlow("getImages", ReImages::class, ResImages::class)
-
-@BindStateFlow("getDownloadFile", ReqDownloadFile::class, File::class)
-class MainActivity: BaseActivity() {
+@BindStateFlow("getDownloadFile", ReqDownloadFile::class, InputStream::class)
+class MainActivity : BaseActivity() {
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var viewBinding: ActivityMainBinding
 
@@ -61,10 +61,10 @@ class MainActivity: BaseActivity() {
         viewModel.getVideoListLiveData.observe(this@MainActivity) {
             progress.hide()
             when (it) {
-                is Result.Success -> tvResult.showSucceedMsg(it.body.toString())
-                is Result.Failed -> tvResult.showFailedMsg(it)
+                is Result.Success   -> tvResult.showSucceedMsg(it.body.toString())
+                is Result.Failed    -> tvResult.showFailedMsg(it)
                 is Result.Throwable -> tvResult.showThrowableMsg(it)
-                else -> {
+                else                -> {
                 }
             }
         }
@@ -72,11 +72,11 @@ class MainActivity: BaseActivity() {
         lifecycleScope.launchWhenCreated {
             viewModel.getImagesStateFlow.collect {
                 when (it) {
-                    is RequestState.LOADING -> progress.show()
-                    is RequestState.SUCCEED -> tvResult.showSucceedMsg(it.body.toString(), progress)
-                    is RequestState.FAILED -> tvResult.showFailedMsg(it, progress)
+                    is RequestState.LOADING   -> progress.show()
+                    is RequestState.SUCCEED   -> tvResult.showSucceedMsg(it.body.toString(), progress)
+                    is RequestState.FAILED    -> tvResult.showFailedMsg(it, progress)
                     is RequestState.Throwable -> tvResult.showThrowableMsg(it, progress)
-                    else -> Unit
+                    else                      -> Unit
                 }
             }
         }

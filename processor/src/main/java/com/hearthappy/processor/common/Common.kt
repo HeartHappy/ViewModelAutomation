@@ -37,9 +37,14 @@ const val NETWORK_HEADER = "Header"
 //ktor package
 const val KTOR_CLIENT_REQUEST_PKG = "io.ktor.client.request"
 const val KTOR_CLIENT_RESPONSE_PKG = "io.ktor.client.statement"
+const val KTOR_PROGRESS_PKG = "io.ktor.client.content.ProgressListener"
 const val KTOR_HTTP_PKG = "io.ktor.http"
 const val KTOR_HTTP_RESPONSE = "HttpHeaders"
 const val KTOR_PARAMETER = "parameter"
+
+//file package
+const val FILE_PACKAGE="java.io.File"
+const val FILE_OUTPUT_STREAM_PACKAGE="java.io.FileOutputStream"
 
 
 

@@ -1,9 +1,10 @@
 package com.hearthappy.viewmodelautomation.model.request
 
-import com.hearthappy.annotations.Body
-import com.hearthappy.annotations.Http
-import com.hearthappy.annotations.Order
-import com.hearthappy.annotations.Request
+import com.hearthappy.annotations.*
+import io.ktor.client.content.*
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 
 /**
@@ -54,6 +55,6 @@ data class ReSendVerificationCode(val mail: String)
 data class ReRegister(val account: String, val code: String, val password: String)
 
 
-//@Streaming
+@Streaming
 @Request(Http.GET, urlString = "/fs/{fileName}", serviceKey = "download")
 data class ReqDownloadFile(val fileName:String)
