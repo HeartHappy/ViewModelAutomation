@@ -12,5 +12,5 @@ data class RequestData(val requestClass: String, //当前请求类
                        val requestParameters: List<String>, //get 参数
                        val requestBodyData: RequestBodyData, //body 参数
                        val order: String?,   //时序
-                       var streamingParameters:List<ParameterData>? //流参数
+                       var streamingParameter:ParameterData? //流参数
 )

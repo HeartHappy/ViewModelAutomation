@@ -3,9 +3,8 @@ package com.hearthappy.processor
 import com.hearthappy.annotations.BindLiveData
 import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.processor.common.*
-import com.hearthappy.processor.model.ParameterData
-import com.hearthappy.processor.model.ViewModelData
 import com.hearthappy.processor.model.RequestData
+import com.hearthappy.processor.model.ViewModelData
 import com.hearthappy.processor.tools.asKotlinPackage
 import com.hearthappy.processor.tools.splitPackage
 import com.squareup.kotlinpoet.ClassName
@@ -18,10 +17,7 @@ import kotlin.reflect.KClass
 internal inline fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(classBuilder: TypeSpec.Builder, requestDataList: List<RequestData>, bindStateFlow: Array<BindStateFlow>?, finishBlock: (BindStateFlow, RequestData?, ViewModelData) -> Unit) {
     bindStateFlow?.onEach {
         val viewModelParam = it.getViewModelParam()
-        val requestData = requestDataList.find { requestData -> requestData.requestClass == viewModelParam.requestBody.simpleName }?.also { req ->
-            createStreamParams(viewModelParam, req)
-        }
-//        requestData?.responseClass = viewModelParam.responseBody.simpleName
+        val requestData = requestDataList.find { requestData -> requestData.requestClass == viewModelParam.requestBody.simpleName } //        requestData?.responseClass = viewModelParam.responseBody.simpleName
         sendNoteMsg("==================> Create a private ${viewModelParam.priPropertyName}")
 
         val generateMutableStateFlow = generateDelegatePropertySpec(viewModelParam.priPropertyName, mutableStateFlow.parameterizedBy(requestState.parameterizedBy(viewModelParam.responseBody)), "${MUTABLE_STATE_FLOW}(${NETWORK_REQUEST_STATE}.DEFAULT)", KModifier.PRIVATE)
@@ -41,9 +37,7 @@ internal inline fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(clas
 internal inline fun ViewModelProcessor.generatePropertyAndMethodByLiveData(classBuilder: TypeSpec.Builder, requestDataList: List<RequestData>, bindLiveData: Array<BindLiveData>?, finishBlock: (BindLiveData, RequestData?, ViewModelData) -> Unit) {
     bindLiveData?.onEach {
         val viewModelParam = it.getViewModelParam()
-        val requestData = requestDataList.find { requestData -> requestData.requestClass == viewModelParam.requestBody.simpleName }?.also { req ->
-            createStreamParams(viewModelParam, req)
-        }
+        val requestData = requestDataList.find { requestData -> requestData.requestClass == viewModelParam.requestBody.simpleName }
         sendNoteMsg("==================> Create a private ${viewModelParam.priPropertyName}") //创建私有属性
         val generateMutableLiveData = generateDelegatePropertySpec(viewModelParam.priPropertyName, mutableLiveData.parameterizedBy(result.parameterizedBy(viewModelParam.responseBody)), "${MUTABLE_LIVEDATA}()", KModifier.PRIVATE)
         classBuilder.addProperty(generateMutableLiveData)
@@ -53,25 +47,6 @@ internal inline fun ViewModelProcessor.generatePropertyAndMethodByLiveData(class
         classBuilder.addProperty(generateLiveData)
 
         finishBlock(it, requestData, viewModelParam)
-    }
-}
-
-/**
- * 创建流参数
- * @param viewModelParam ViewModelData
- * @param req RequestData
- */
-private fun createStreamParams(viewModelParam: ViewModelData, req: RequestData) {
-    when (viewModelParam.responseBody.canonicalName) {
-        FILE_PACKAGE               -> {
-            req.streamingParameters = listOf(ParameterData("outFile", FILE_PACKAGE), ParameterData("listener", KTOR_PROGRESS_PKG))
-        }
-        FILE_OUTPUT_STREAM_PACKAGE -> {
-            req.streamingParameters = listOf(ParameterData("fileInputStream", FILE_OUTPUT_STREAM_PACKAGE), ParameterData("listener", KTOR_PROGRESS_PKG))
-        }
-        INPUT_STREAM_PACKAGE       -> {
-            req.streamingParameters = listOf(ParameterData("listener", KTOR_PROGRESS_PKG))
-        }
     }
 }
 

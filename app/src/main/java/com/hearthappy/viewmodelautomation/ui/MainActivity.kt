@@ -29,8 +29,7 @@ import java.io.InputStream
  *
  * @property viewModel MainViewModel
  */
-@AndroidViewModel
-@BindLiveData("getVideoList", ReVideoList::class, ResVideoList::class)
+@AndroidViewModel @BindLiveData("getVideoList", ReVideoList::class, ResVideoList::class)
 @BindStateFlow("getImages", ReImages::class, ResImages::class)
 @BindStateFlow("getDownloadFile", ReqDownloadFile::class, InputStream::class)
 //@BindStateFlow("getDownloadFile", ReqDownloadFile::class, File::class)
@@ -56,7 +55,7 @@ class MainActivity : BaseActivity() {
             }
 
             btnDownloadFile.setOnClickListener {
-                /*val file = File("${Environment.getExternalStorageDirectory().path}/DCIM/test.png")
+                /*
                 lifecycleScope.launchWhenCreated {
                     fileUpload(file){a,b->
                         Log.d(TAG, "onCreate: current:$a,total:$b")
@@ -102,7 +101,9 @@ class MainActivity : BaseActivity() {
                     is RequestState.LOADING   -> downloadProgressBar.show()
                     is RequestState.SUCCEED   -> {
                         downloadProgressBar.hide()
-//                        ivShowFile.setImageURI(Uri.fromFile(it.body))
+//                        val file = File("${Environment.getExternalStorageDirectory().path}/DCIM/test.png")
+//                        it.body.copyTo(file.outputStream())
+//                        ivShowFile.setImageURI(Uri.fromFile(file))
                         ivShowFile.setImageBitmap(BitmapFactory.decodeStream(it.body))
                     }
                     is RequestState.FAILED    -> tvResult.showFailedMsg(it, downloadProgressBar)

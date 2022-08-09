@@ -6,8 +6,6 @@ import io.ktor.client.statement.*
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
 
 /**
  * ViewModel生成使用
@@ -16,13 +14,11 @@ import java.io.FileOutputStream
  * @param onSucceed Function2<R, HttpResponse, Unit>
  * @param onFailure Function1<FailedBody, Unit>
  * @param onThrowable Function1<Throwable, Unit>
- * @param outFile File?
- * @param fileOutputStream FileOutputStream?
  * @param dispatcher CoroutineDispatcher
  */
-inline fun <reified R : Any> ViewModel.requestScope(crossinline io: suspend () -> HttpResponse, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit, outFile: File? = null, fileOutputStream: FileOutputStream? = null, dispatcher: CoroutineDispatcher = Dispatchers.Main) {
+inline fun <reified R : Any> ViewModel.requestScope(crossinline io: suspend () -> HttpResponse, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit, dispatcher: CoroutineDispatcher = Dispatchers.Main) {
     viewModelScope.launch(Dispatchers.IO) {
-        requestHandler(io, onSucceed, onFailure, onThrowable, dispatcher, outFile, fileOutputStream) //runCatching { io() }.apply { resultHandler(this, onSucceed, onFailure, onThrowable) }
+        requestHandler(io, onSucceed, onFailure, onThrowable, dispatcher) //runCatching { io() }.apply { resultHandler(this, onSucceed, onFailure, onThrowable) }
     }
 }
 
@@ -33,12 +29,10 @@ inline fun <reified R : Any> ViewModel.requestScope(crossinline io: suspend () -
  * @param onSucceed Function2<R, HttpResponse, Unit>
  * @param onFailure Function1<FailedBody, Unit>
  * @param onThrowable Function1<Throwable, Unit>
- * @param outFile File?
- * @param fileOutputStream FileOutputStream?
  * @param dispatcher CoroutineDispatcher
  */
-suspend inline fun <reified R> requestScope(io: () -> HttpResponse, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit, outFile: File? = null, fileOutputStream: FileOutputStream? = null, dispatcher: CoroutineDispatcher = Dispatchers.Main) {
-    runCatching { io() }.apply { resultHandler(this, onSucceed, onFailure, onThrowable, dispatcher, outFile, fileOutputStream) }
+suspend inline fun <reified R> requestScope(io: () -> HttpResponse, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit, crossinline onThrowable: (Throwable) -> Unit, dispatcher: CoroutineDispatcher = Dispatchers.Main) {
+    runCatching { io() }.apply { resultHandler(this, onSucceed, onFailure, onThrowable, dispatcher) }
 }
 
 

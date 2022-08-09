@@ -1,6 +1,7 @@
 package com.hearthappy.processor
 
 import com.hearthappy.annotations.*
+import com.hearthappy.processor.common.KTOR_PROGRESS_PKG
 import com.hearthappy.processor.model.*
 import com.hearthappy.processor.tools.asRest
 import com.hearthappy.processor.tools.findRest
@@ -58,13 +59,7 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
 
             //获取流媒体
             val streaming = streamingElements.getRequestClassFromClassAnnotation(requestClass)
-            val streamingRequestParams =
-                streaming?.run { getAllParameterByRequestClass(requestElement) }
-            val streamingParams =
-                streamingRequestParams?.filter { it.parameterType == "java.io.File" || it.parameterType == "java.io.FileInputStream" }
-
-
-            sendNoteMsg("streamingParams:${streamingParams?.joinToString { sp -> sp.parameterName }}")
+            val streamingParameters=streaming?.run { ParameterData("listener", KTOR_PROGRESS_PKG) }
 
             //获取body相关参数
             val requestBodyData = getRequestBodyData(bodyElements, queryElements, requestElement)
@@ -79,7 +74,7 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
 
 
             val requestData =
-                RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData, order, streamingParameters = streamingParams)
+                RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData, order, streamingParameter = streamingParameters)
             add(requestData)
 
             //sendNoteMsg("【RequestData】:$requestData")

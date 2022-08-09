@@ -14,12 +14,12 @@ import java.io.File
 import java.io.FileOutputStream
 
 
-suspend fun testFileDownload(fileName: String, file: File) {
+suspend fun testFileDownload(fileName: String) {
     requestScope<File>(io = {
         sendKtorDownload(url = "http://192.168.51.60:9998/fs/$fileName")
     }, onSucceed = { body, _ ->
         println("body:${body.absolutePath}")
-    }, onFailure = {}, onThrowable = {}, outFile = file, dispatcher = Dispatchers.IO)
+    }, onFailure = {}, onThrowable = {}, dispatcher = Dispatchers.IO)
 }
 
 suspend inline fun login() = ktorClient().use {

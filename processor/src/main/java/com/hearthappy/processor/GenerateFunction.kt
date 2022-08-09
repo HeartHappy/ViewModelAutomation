@@ -5,7 +5,10 @@ import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.annotations.BodyType
 import com.hearthappy.annotations.Http
 import com.hearthappy.processor.common.*
-import com.hearthappy.processor.model.*
+import com.hearthappy.processor.model.HeaderData
+import com.hearthappy.processor.model.RequestData
+import com.hearthappy.processor.model.ServiceConfigData
+import com.hearthappy.processor.model.ViewModelData
 import com.hearthappy.processor.tools.asKotlinClassName
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
@@ -19,25 +22,11 @@ internal fun generateFunctionByLiveData(it: BindLiveData, requestData: RequestDa
         addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Failed(it${addOrder(requestData)}))},")
         addStatement("onSucceed = { body, _ ->${viewModelParam.priPropertyName}.postValue(Result.Success(body${addOrder(requestData)}))},")
         addStatement("onThrowable = { ${viewModelParam.priPropertyName}.postValue(Result.Throwable(it${addOrder(requestData)}))}")
-        //通过ResponseClass识别并声称参数
-        addStreaming(requestData)
         addStatement(")")
     }
     classBuilder.addFunction(function.build())
 }
 
-fun FunSpec.Builder.addStreaming(requestData: RequestData?) {
-    requestData?.apply {
-        streamingParameters?.apply {
-            for (parameterData in this) {
-                when (parameterData.parameterType) {
-                    FILE_PACKAGE               -> addStatement(",outFile=${parameterData.parameterName}")
-                    FILE_OUTPUT_STREAM_PACKAGE -> addStatement(",fileOutputStream=${parameterData.parameterName}")
-                }
-            }
-        }
-    }
-}
 
 internal fun ViewModelProcessor.generateFunctionByStateFlow(it: BindStateFlow, requestData: RequestData?, viewModelParam: ViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
     val function = FunSpec.builder(it.methodName).apply {
@@ -48,8 +37,6 @@ internal fun ViewModelProcessor.generateFunctionByStateFlow(it: BindStateFlow, r
         addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.FAILED(it${addOrder(requestData)}) },")
         addStatement("onSucceed = { body,response-> ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.SUCCEED(body,response${addOrder(requestData)}) },")
         addStatement("onThrowable = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.Throwable(it${addOrder(requestData)}) }")
-        //通过ResponseClass识别并声称参数
-        addStreaming(requestData)
         addStatement(")")
     }
     classBuilder.addFunction(function.build())
@@ -64,10 +51,10 @@ private fun FunSpec.Builder.generateMethodRequestScope(requestData: RequestData?
     requestData?.apply {
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = {")
         addRequiredImport(requiredImport)
-        if (viewModelParam.responseBody.canonicalName == FILE_PACKAGE || viewModelParam.responseBody.canonicalName == FILE_OUTPUT_STREAM_PACKAGE || viewModelParam.responseBody.canonicalName == INPUT_STREAM_PACKAGE) {
+        streamingParameter?.let {
             requiredImport.add(NETWORK_DOWNLOAD)
-            generateRequestApi("sendKtorDownload", http, url = url, headers = headers, fixedHeaders = fixedHeaders, serviceConfigData = serviceConfigData, listener = "listener")
-        } else {
+            generateRequestApi("sendKtorDownload", http, url = url, headers = headers, fixedHeaders = fixedHeaders, serviceConfigData = serviceConfigData, listener = it.parameterName)
+        } ?: let {
             requiredImport.add(NETWORK_REQUEST)
             generateRequestApi("sendKtorRequest", http, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
         }
@@ -121,15 +108,18 @@ private fun FunSpec.Builder.generateRequestApi(sendApi: String, http: Http, body
     addStatement(")")
 }
 
+/**
+ * 生成方法参数
+ * @receiver FunSpec.Builder
+ * @param requestData RequestData?
+ */
 private fun FunSpec.Builder.generateMethodParametersSpec(requestData: RequestData?) { //没有@Request注解时，由开发者自定义请求
-    // TODO: 优化到创建RequestData中去
-    //生成方法参数
     requestData?.apply {
         methodParameters.apply {
             for (parameterData in this) addParameter(parameterData.parameterName, parameterData.parameterType.asKotlinClassName())
         }
-        streamingParameters?.takeIf { it.isNotEmpty() }?.apply {
-            for (parameterData in this) addParameter(parameterData.parameterName, parameterData.parameterType.asKotlinClassName())
+        streamingParameter?.apply {
+            addParameter(parameterName, parameterType.asKotlinClassName())
         }
     } ?: addParameter("io", LambdaTypeName.get(returnType = ClassName(KTOR_CLIENT_RESPONSE_PKG, "HttpResponse")).copy(suspending = true))
 }
