@@ -1,17 +1,17 @@
 <resources>
     <string name="app_name">ViewModelAutomation</string>
     <string name="welcome_to_viewmodelautomation">Welcome to ViewModelAutomation!</string>
-    <string name="login">登录</string>
-    <string name="get_images">获取图片列表</string>
-    <string name="get_video_list">获取视频列表</string>
-    <string name="register">注册</string>
-    <string name="get_verification">获取验证码</string>
-    <string name="please_enter_email">请输入邮箱</string>
-    <string name="please_enter_verification">请输入验证码</string>
+    <string name="login">Login</string>
+    <string name="get_images">Get a list of pictures</string>
+    <string name="get_video_list">Get video list</string>
+    <string name="register">register</string>
+    <string name="get_verification">get verification code</string>
+    <string name="please_enter_email">please input your email</string>
+    <string name="please_enter_verification">please enter verification code</string>
     <string name="sign_in">Sign in</string>
     <string name="result">Result</string>
-    <string name="please_enter_password">请输入密码</string>
+    <string name="please_enter_password">Please enter password</string>
     <string name="sign_up">Sign up</string>
     <string name="other">Other</string>
-    <string name="download_file">下载文件</string>
+    <string name="download_file">download file</string>
 </resources>

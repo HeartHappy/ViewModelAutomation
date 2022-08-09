@@ -45,6 +45,7 @@ const val KTOR_PARAMETER = "parameter"
 //file package
 const val FILE_PACKAGE="java.io.File"
 const val FILE_OUTPUT_STREAM_PACKAGE="java.io.FileOutputStream"
+const val INPUT_STREAM_PACKAGE="java.io.InputStream"
 
 
 

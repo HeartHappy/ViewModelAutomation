@@ -9,6 +9,7 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 
 
 /**
@@ -48,6 +49,12 @@ suspend inline fun HttpClient.patchRequest(url: String, headers: List<Header>?, 
 suspend inline fun HttpClient.deleteRequest(url: String, headers: List<Header>?, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = delete(urlString = url) {
     handleHeaders(headers)
     httpRequestScope()
+}
+
+fun multiPartMixedDataContent(parts: List<PartData>): MultiPartFormDataContent {
+    val boundary = "WebAppBoundary"
+    val contentType = ContentType.MultiPart.Mixed.withParameter("boundary", boundary)
+    return MultiPartFormDataContent(parts, boundary, contentType)
 }
 
 /**

@@ -11,18 +11,18 @@
         android:id="@+id/etEmail"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="1151087058@qq.com"
         android:hint="@string/please_enter_email"
         android:inputType="textEmailAddress"
         android:minHeight="48dp"
+        android:text="1151087058@qq.com"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/btnLogin"
+        style="@style/style_button"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:text="@string/login"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
@@ -49,20 +49,16 @@
 
     <Button
         android:id="@+id/btnGoToRegister"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        style="@style/style_button"
         android:text="@string/sign_up"
-        android:textAllCaps="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/btnGoToOther"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        style="@style/style_button"
         android:layout_marginStart="12dp"
         android:text="@string/other"
-        android:textAllCaps="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/btnGoToRegister" />
 

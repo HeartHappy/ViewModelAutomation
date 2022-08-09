@@ -20,18 +20,17 @@
 
     <ImageView
         android:id="@+id/ivShowFile"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:contentDescription="@string/download_file"
-        android:src="@mipmap/ic_launcher"
+        android:scaleType="centerCrop"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/downloadProgressBar" />
 
     <Button
         android:id="@+id/btnGetImages"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        style="@style/style_button"
         android:text="@string/get_images"
         app:layout_constraintBottom_toTopOf="@+id/btnGetVideoList"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -41,8 +40,7 @@
 
     <Button
         android:id="@+id/btnGetVideoList"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        style="@style/style_button"
         android:text="@string/get_video_list"
         app:layout_constraintBottom_toTopOf="@+id/btnDownloadFile"
         app:layout_constraintEnd_toEndOf="parent"
@@ -51,8 +49,7 @@
 
     <Button
         android:id="@+id/btnDownloadFile"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        style="@style/style_button"
         android:text="@string/download_file"
         app:layout_constraintBottom_toBottomOf="@+id/tvResult"
         app:layout_constraintEnd_toEndOf="parent"

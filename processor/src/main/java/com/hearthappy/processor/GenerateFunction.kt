@@ -64,7 +64,7 @@ private fun FunSpec.Builder.generateMethodRequestScope(requestData: RequestData?
     requestData?.apply {
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = {")
         addRequiredImport(requiredImport)
-        if (viewModelParam.responseBody.canonicalName == FILE_PACKAGE || viewModelParam.responseBody.canonicalName == FILE_OUTPUT_STREAM_PACKAGE) {
+        if (viewModelParam.responseBody.canonicalName == FILE_PACKAGE || viewModelParam.responseBody.canonicalName == FILE_OUTPUT_STREAM_PACKAGE || viewModelParam.responseBody.canonicalName == INPUT_STREAM_PACKAGE) {
             requiredImport.add(NETWORK_DOWNLOAD)
             generateRequestApi("sendKtorDownload", http, url = url, headers = headers, fixedHeaders = fixedHeaders, serviceConfigData = serviceConfigData, listener = "listener")
         } else {

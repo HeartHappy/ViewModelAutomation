@@ -1,7 +1,9 @@
 package com.hearthappy.ktorexpand.code.network
 
+import io.ktor.client.content.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.utils.io.jvm.javaio.*
@@ -41,24 +43,81 @@ suspend fun fileDownload(fileOutputStream: FileOutputStream) = ktorClient().use 
     get.bodyAsChannel().toInputStream().copyTo(fileOutputStream)
 }
 
+
 /**
  * 测试文件上传，返回json
  */
-//suspend fun fileUpload() = ktorClient().use {
-//    val post = it.post("http://192.168.51.60:9998/upload-json")
-//}
+suspend fun fileUpload(file: File, listener: ProgressListener) = ktorClient().use {
+    val url = "http://192.168.51.60:9998/upload-json"
+    it.post(url) {
+        setBody(MultiPartFormDataContent(formData {
+            append("file",
+                file.readBytes(),
+                headers = Headers.build { //            append(HttpHeaders.ContentType, ContentType.MultiPart.FormData)
+                    append(HttpHeaders.ContentDisposition, "filename=\"ktor_logo3.jpg\"")
+                })
+            onUpload(listener)
+        }))
+    }
+}
 
+suspend fun multiFileUpload(
+    multiPartBody: List<MultiPartBody>,
+    listener: (suspend (bytesSentTotal: Long, contentLength: Long) -> Unit)?
+) = ktorClient().use {
+    val url = "http://192.168.1.240:9998/multipart-upload-json"
+
+    it.post(url) {
+        setBody(MultiPartFormDataContent(formData {
+            for (multiPart in multiPartBody) {
+                append(multiPart.key,
+                    multiPart.file.readBytes(),
+                    headers = Headers.build { //                  append(HttpHeaders.ContentType, ContentType.MultiPart.FormData)
+                        if (multiPart.contentDisposition == EmptyString) {
+                            append(
+                                HttpHeaders.ContentDisposition, "filename=${multiPart.file.name}"
+                            )
+                        } else {
+                            append(
+                                HttpHeaders.ContentDisposition,
+                                "filename=${multiPart.contentDisposition}"
+                            )
+                        }
+                    })
+            }
+        })) //多文件上传只能监听总进度问题
+        onUpload(listener)
+
+    }
+}
 
 
 fun main() = runBlocking {
-    /*val outFile = File("/Library/MyComputer/Software/Android/Git/ViewModelAutomation/test.jpg")
+    val outFile = File("/Library/MyComputer/Software/Android/Git/ViewModelAutomation/test.jpg")
+    val outFile2 = File("/Library/MyComputer/Software/Android/Git/ViewModelAutomation/2.jpeg")
 
-    //fileDownload(outputStream)
+    println("exist:${outFile.exists()},${outFile.name}") //fileDownload(outputStream)
 
+    //文件上传
+    /* launch {
+ //        testFileDownload("1.jpg", outFile)
+         val fileUpload = fileUpload(outFile) { a, b ->
+             println("current:$a,total:$b")
+         }
+         println("http:${fileUpload.status}")
+     }*/ //多文件上传:312841\169675
     launch {
-        testFileDownload("1.jpg", outFile)
+        val httpResponse = multiFileUpload(
+            listOf(MultiPartBody("file", outFile, "ktor1.png") { a, b ->
+                println("ktor1.png process:${a}")
+            }, MultiPartBody("file", outFile2, "ktor2.png") { a, b ->
+                println("ktor2.png process:${a}")
+            }),
+        ) { a, b ->
+
+        }
+        println("http:${httpResponse.status}")
     }
-*/
 
     println("end...:")
 }

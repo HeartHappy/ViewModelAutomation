@@ -18,13 +18,8 @@ import kotlin.reflect.KClass
 internal inline fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(classBuilder: TypeSpec.Builder, requestDataList: List<RequestData>, bindStateFlow: Array<BindStateFlow>?, finishBlock: (BindStateFlow, RequestData?, ViewModelData) -> Unit) {
     bindStateFlow?.onEach {
         val viewModelParam = it.getViewModelParam()
-        val requestData = requestDataList.find { requestData -> requestData.requestClass == viewModelParam.requestBody.simpleName }?.also {req->
-            val responseClass=viewModelParam.responseBody.canonicalName
-            if (responseClass== FILE_PACKAGE) {
-                req.streamingParameters=listOf(ParameterData("outFile", FILE_PACKAGE), ParameterData("listener", KTOR_PROGRESS_PKG))
-            }else if(responseClass== FILE_OUTPUT_STREAM_PACKAGE){
-                req.streamingParameters=listOf(ParameterData("fileInputStream", FILE_OUTPUT_STREAM_PACKAGE), ParameterData("listener", KTOR_PROGRESS_PKG))
-            }
+        val requestData = requestDataList.find { requestData -> requestData.requestClass == viewModelParam.requestBody.simpleName }?.also { req ->
+            createStreamParams(viewModelParam, req)
         }
 //        requestData?.responseClass = viewModelParam.responseBody.simpleName
         sendNoteMsg("==================> Create a private ${viewModelParam.priPropertyName}")
@@ -46,13 +41,8 @@ internal inline fun ViewModelProcessor.generatePropertyAndMethodByStateFlow(clas
 internal inline fun ViewModelProcessor.generatePropertyAndMethodByLiveData(classBuilder: TypeSpec.Builder, requestDataList: List<RequestData>, bindLiveData: Array<BindLiveData>?, finishBlock: (BindLiveData, RequestData?, ViewModelData) -> Unit) {
     bindLiveData?.onEach {
         val viewModelParam = it.getViewModelParam()
-        val requestData = requestDataList.find { requestData -> requestData.requestClass == viewModelParam.requestBody.simpleName }?.also {req->
-            val responseClass=viewModelParam.responseBody.simpleName
-            if (responseClass=="File") {
-                req.streamingParameters=listOf(ParameterData("outFile","java.io.File"), ParameterData("listener", "io.ktor.client.content.ProgressListener"))
-            }else if(responseClass=="FileOutputStream"){
-                req.streamingParameters=listOf(ParameterData("fileInputStream","java.io.FileInputStream"), ParameterData("listener", "io.ktor.client.content.ProgressListener"))
-            }
+        val requestData = requestDataList.find { requestData -> requestData.requestClass == viewModelParam.requestBody.simpleName }?.also { req ->
+            createStreamParams(viewModelParam, req)
         }
         sendNoteMsg("==================> Create a private ${viewModelParam.priPropertyName}") //创建私有属性
         val generateMutableLiveData = generateDelegatePropertySpec(viewModelParam.priPropertyName, mutableLiveData.parameterizedBy(result.parameterizedBy(viewModelParam.responseBody)), "${MUTABLE_LIVEDATA}()", KModifier.PRIVATE)
@@ -66,6 +56,25 @@ internal inline fun ViewModelProcessor.generatePropertyAndMethodByLiveData(class
     }
 }
 
+/**
+ * 创建流参数
+ * @param viewModelParam ViewModelData
+ * @param req RequestData
+ */
+private fun createStreamParams(viewModelParam: ViewModelData, req: RequestData) {
+    when (viewModelParam.responseBody.canonicalName) {
+        FILE_PACKAGE               -> {
+            req.streamingParameters = listOf(ParameterData("outFile", FILE_PACKAGE), ParameterData("listener", KTOR_PROGRESS_PKG))
+        }
+        FILE_OUTPUT_STREAM_PACKAGE -> {
+            req.streamingParameters = listOf(ParameterData("fileInputStream", FILE_OUTPUT_STREAM_PACKAGE), ParameterData("listener", KTOR_PROGRESS_PKG))
+        }
+        INPUT_STREAM_PACKAGE       -> {
+            req.streamingParameters = listOf(ParameterData("listener", KTOR_PROGRESS_PKG))
+        }
+    }
+}
+
 
 /**
  * 通过Annotation获取生成ViewModel所需参数
@@ -76,7 +85,7 @@ private fun Annotation.getViewModelParam(): ViewModelData {
     var responseClass = ""
     var pubPropertyName = ""
     when (this) {
-        is BindLiveData -> {
+        is BindLiveData  -> {
             requestClass = getAnnotationValue { it.requestClass }.toString()
             responseClass = getAnnotationValue { bld -> bld.responseClass }.toString()
             pubPropertyName = liveDataName.ifEmpty { methodName.plus(LIVEDATA) }
