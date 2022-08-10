@@ -31,8 +31,11 @@ const val NETWORK_LIVEDATA_RESULT = "Result"
 const val NETWORK_DEFAULT_CONFIG = "DefaultConfig"
 const val NETWORK_REQUEST = "sendKtorRequest"
 const val NETWORK_DOWNLOAD = "sendKtorDownload"
+const val NETWORK_UPLOAD = "sendKtorUpload"
 const val NETWORK_CONTENT_TYPE = "ContentType"
 const val NETWORK_HEADER = "Header"
+const val NETWORK_Part = "Part"
+const val NETWORK_MultipartBody = "MultipartBody"
 
 //ktor package
 const val KTOR_CLIENT_REQUEST_PKG = "io.ktor.client.request"
@@ -42,10 +45,6 @@ const val KTOR_HTTP_PKG = "io.ktor.http"
 const val KTOR_HTTP_RESPONSE = "HttpHeaders"
 const val KTOR_PARAMETER = "parameter"
 
-//file package
-const val FILE_PACKAGE="java.io.File"
-const val FILE_OUTPUT_STREAM_PACKAGE="java.io.FileOutputStream"
-const val INPUT_STREAM_PACKAGE="java.io.InputStream"
 
 
 

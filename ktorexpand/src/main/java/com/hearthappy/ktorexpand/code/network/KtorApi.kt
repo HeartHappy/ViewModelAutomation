@@ -9,14 +9,26 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
-import io.ktor.http.content.*
+import kotlin.random.Random
 
+internal fun generateBoundary(): String = buildString {
+    repeat(32) {
+        append(Random.nextInt().toString(16))
+    }
+}.take(70)
+
+internal fun FormBuilder.addAppendToFormData(partData: PartData) {
+    append(partData.key, partData.file.readBytes(), headers = Headers.build {
+        append(HttpHeaders.ContentType, partData.mediaType)
+        append(HttpHeaders.ContentDisposition, "filename=${partData.contentDisposition?.run { this } ?: partData.file.name}")
+    })
+}
 
 /**
  * 默认Content-Type:application/json
  * @receiver HttpRequestBuilder
  */
-fun HttpRequestBuilder.jsonHeader() = header(HttpHeaders.ContentType, ContentType.Application.Json)
+private fun HttpRequestBuilder.jsonHeader() = header(HttpHeaders.ContentType, ContentType.Application.Json)
 
 val textHeader = Header(HttpHeaders.ContentType, ContentType.Text.Plain)
 
@@ -51,10 +63,20 @@ suspend inline fun HttpClient.deleteRequest(url: String, headers: List<Header>?,
     httpRequestScope()
 }
 
-fun multiPartMixedDataContent(parts: List<PartData>): MultiPartFormDataContent {
-    val boundary = "WebAppBoundary"
-    val contentType = ContentType.MultiPart.Mixed.withParameter("boundary", boundary)
-    return MultiPartFormDataContent(parts, boundary, contentType)
+suspend fun HttpClient.multiPartRequest(httpType: Int = POST, url: String, headers: List<Header>?, listener: ProgressListener, multipartBody: MultipartBody): HttpResponse {
+    return when (httpType) {
+        POST -> postRequest(url, headers) {
+            setBody(MultiPartFormDataContent(
+                    formData {
+                        multipartBody.partData?.apply { addAppendToFormData(this) }
+                        multipartBody.multiPartData?.apply { for (partData in this) addAppendToFormData(partData) }
+                    },
+                    boundary = multipartBody.boundary,
+            ))
+            onUpload(listener)
+        }
+        else -> throw RuntimeException("sendKtorUpload not implemented yet，The current RequestType value is $httpType")
+    }
 }
 
 /**
@@ -68,11 +90,16 @@ fun multiPartMixedDataContent(parts: List<PartData>): MultiPartFormDataContent {
  */
 suspend fun sendKtorDownload(httpType: Int = GET, url: String, headers: List<Header>? = null, listener: ProgressListener = { _, _ -> }, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
     when (httpType) {
-        GET -> it.getRequest(url, headers) { onDownload(listener) }
+        GET  -> it.getRequest(url, headers) { onDownload(listener) }
         POST -> it.postRequest(url, headers) { onDownload(listener) }
-        else -> throw RuntimeException("KtorApi not implemented yet，The current RequestType value is $httpType")
+        else -> throw RuntimeException("sendKtorDownload not implemented yet，The current RequestType value is $httpType")
     }
 }
+
+suspend fun sendKtorUpload(httpType: Int = POST, url: String, headers: List<Header>? = null, multipartBody: MultipartBody, listener: ProgressListener = { _, _ -> }, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
+    it.multiPartRequest(httpType, url, headers, listener, multipartBody)
+}
+
 
 /**
  *
@@ -87,66 +114,66 @@ suspend fun sendKtorDownload(httpType: Int = GET, url: String, headers: List<Hea
  */
 suspend inline fun sendKtorRequest(httpType: Int = GET, bodyType: Int = NONE, url: String, headers: List<Header>? = null, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
     when (httpType) {
-        GET -> {
+        GET    -> {
             when (bodyType) {
-                NONE -> it.getRequest(url, headers) { parameters() }
-                TEXT -> it.getRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
-                JSON -> it.getRequest(url, headers) { setBody(requestBody) }
-                FormData -> it.submitForm(url = url, Parameters.build(appends), encodeInQuery = true) { handleHeaders(headers) }
+                NONE           -> it.getRequest(url, headers) { parameters() }
+                TEXT           -> it.getRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
+                JSON           -> it.getRequest(url, headers) { setBody(requestBody) }
+                FormData       -> it.submitForm(url = url, Parameters.build(appends), encodeInQuery = true) { handleHeaders(headers) }
                 FormUrlEncoded -> it.getRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
-                else -> throw RuntimeException("get other error")
+                else           -> throw RuntimeException("get other error")
             }
         }
-        POST -> {
+        POST   -> {
             when (bodyType) {
-                NONE -> it.postRequest(url, headers) { parameters() }
-                TEXT -> it.postRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
-                JSON -> it.postRequest(url, headers) { setBody(requestBody) }
-                FormData -> it.submitForm(url = url, Parameters.build(appends)) {
+                NONE           -> it.postRequest(url, headers) { parameters() }
+                TEXT           -> it.postRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
+                JSON           -> it.postRequest(url, headers) { setBody(requestBody) }
+                FormData       -> it.submitForm(url = url, Parameters.build(appends)) {
                     handleHeaders(headers)
                 }
                 FormUrlEncoded -> it.postRequest(url, headers) {
                     setBody(FormDataContent(Parameters.build(appends)))
                 }
-                else -> throw RuntimeException("post other error")
+                else           -> throw RuntimeException("post other error")
             }
         }
-        PATCH -> {
+        PATCH  -> {
             when (bodyType) {
-                NONE -> it.patchRequest(url, headers) { parameters() }
-                TEXT -> it.patchRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) {
+                NONE           -> it.patchRequest(url, headers) { parameters() }
+                TEXT           -> it.patchRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) {
                     setBody(Gson().toJson(requestBody))
                 }
-                JSON -> it.patchRequest(url, headers) {
+                JSON           -> it.patchRequest(url, headers) {
                     setBody(requestBody)
                 }
-                FormData -> it.submitForm(url = url, Parameters.build(appends)) {
+                FormData       -> it.submitForm(url = url, Parameters.build(appends)) {
                     handleHeaders(headers)
                 }
                 FormUrlEncoded -> it.patchRequest(url, headers) {
                     setBody(FormDataContent(Parameters.build(appends)))
                 }
-                else -> throw RuntimeException("patch other error")
+                else           -> throw RuntimeException("patch other error")
             }
         }
         DELETE -> {
             when (bodyType) {
-                NONE -> it.deleteRequest(url, headers) { parameters() }
-                TEXT -> it.deleteRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) {
+                NONE           -> it.deleteRequest(url, headers) { parameters() }
+                TEXT           -> it.deleteRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) {
                     setBody(Gson().toJson(requestBody))
                 }
-                JSON -> it.deleteRequest(url, headers) { setBody(requestBody) }
-                FormData -> it.submitForm(url = url, Parameters.build(appends)) {
+                JSON           -> it.deleteRequest(url, headers) { setBody(requestBody) }
+                FormData       -> it.submitForm(url = url, Parameters.build(appends)) {
                     handleHeaders(headers)
                 }
                 FormUrlEncoded -> it.deleteRequest(url, headers) {
                     setBody(FormDataContent(Parameters.build(appends)))
                 }
-                else -> throw RuntimeException("delete other error")
+                else           -> throw RuntimeException("delete other error")
             }
         }
-        else -> {
-            throw RuntimeException("KtorApi not implemented yet，The current RequestType value is $httpType")
+        else   -> {
+            throw RuntimeException("sendKtorRequest not implemented yet，The current RequestType value is $httpType")
         }
     }
 

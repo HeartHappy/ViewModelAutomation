@@ -28,9 +28,8 @@ internal fun generateFunctionByLiveData(it: BindLiveData, requestData: RequestDa
 }
 
 
-internal fun ViewModelProcessor.generateFunctionByStateFlow(it: BindStateFlow, requestData: RequestData?, viewModelParam: ViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
+internal fun generateFunctionByStateFlow(it: BindStateFlow, requestData: RequestData?, viewModelParam: ViewModelData, classBuilder: TypeSpec.Builder, requiredImport: MutableList<String>) {
     val function = FunSpec.builder(it.methodName).apply {
-        sendNoteMsg("RequestData:$requestData")
         generateMethodParametersSpec(requestData)
         addStatement("${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.LOADING")
         generateMethodRequestScope(requestData, viewModelParam, requiredImport)
@@ -51,13 +50,22 @@ private fun FunSpec.Builder.generateMethodRequestScope(requestData: RequestData?
     requestData?.apply {
         addStatement("requestScope<${viewModelParam.responseBody.simpleName}>(io = {")
         addRequiredImport(requiredImport)
+
         streamingParameter?.let {
             requiredImport.add(NETWORK_DOWNLOAD)
-            generateRequestApi("sendKtorDownload", http, url = url, headers = headers, fixedHeaders = fixedHeaders, serviceConfigData = serviceConfigData, listener = it.parameterName)
-        } ?: let {
-            requiredImport.add(NETWORK_REQUEST)
-            generateRequestApi("sendKtorRequest", http, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
+            generateRequestApi(NETWORK_DOWNLOAD, http, url = url, headers = headers, fixedHeaders = fixedHeaders, serviceConfigData = serviceConfigData, listener = it.parameterName)
+            addStatement("},")
+            return@apply
         }
+        multiPartParameters?.takeIf { it.isNotEmpty() }?.let {
+            requiredImport.add(NETWORK_UPLOAD)
+            generateRequestApi(NETWORK_UPLOAD, http, url = url, headers = headers, fixedHeaders = fixedHeaders, serviceConfigData = serviceConfigData, listener = it[1].parameterName, multipart = it[0].parameterName)
+            addStatement("},")
+            return@apply
+        }
+
+        requiredImport.add(NETWORK_REQUEST)
+        generateRequestApi(NETWORK_REQUEST, http, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
         addStatement("},")
     } ?: let {
         requiredImport.add(NETWORK_REQUEST_SCOPE)
@@ -71,7 +79,7 @@ private fun RequestData.addRequiredImport(requiredImport: MutableList<String>) {
     if (headers.isNotEmpty() || fixedHeaders?.isNotEmpty() == true) requiredImport.add(NETWORK_HEADER)
 }
 
-private fun FunSpec.Builder.generateRequestApi(sendApi: String, http: Http, bodyType: BodyType = BodyType.NONE, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?, listener: String? = null) {
+private fun FunSpec.Builder.generateRequestApi(sendApi: String, http: Http, bodyType: BodyType = BodyType.NONE, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?, listener: String? = null, multipart: String? = null) {
 
     addStatement("$sendApi(")
     if (requestBody != Http.GET) addStatement("httpType=${http}")
@@ -86,8 +94,10 @@ private fun FunSpec.Builder.generateRequestApi(sendApi: String, http: Http, body
         addStatement(")")
     }
 
+    multipart?.apply { addStatement(",multipartBody=$this") }
+
     parameters?.apply {
-        if (!this.contains(appends?.first)) {
+        if (!this.contains(appends?.first) && this.isNotEmpty()) {
             addStatement(",parameters={")
             for (parameter in this) addStatement("parameter(\"${parameter}\", ${parameter})")
             addStatement("}")
@@ -118,8 +128,11 @@ private fun FunSpec.Builder.generateMethodParametersSpec(requestData: RequestDat
         methodParameters.apply {
             for (parameterData in this) addParameter(parameterData.parameterName, parameterData.parameterType.asKotlinClassName())
         }
+        //添加下载进度监听
         streamingParameter?.apply {
             addParameter(parameterName, parameterType.asKotlinClassName())
         }
+        //查找[multiPart,listener]中的listener参数，并添加上传进度监听
+        multiPartParameters?.find { it.parameterType == KTOR_PROGRESS_PKG }?.apply { addParameter(parameterName, parameterType.asKotlinClassName()) }
     } ?: addParameter("io", LambdaTypeName.get(returnType = ClassName(KTOR_CLIENT_RESPONSE_PKG, "HttpResponse")).copy(suspending = true))
 }

@@ -13,11 +13,13 @@ import com.hearthappy.ktorexpand.code.network.asThrowableMessage
 
 open class BaseActivity: AppCompatActivity() {
 
-    protected fun ProgressBar.show() {
+    protected fun ProgressBar.show(max:Int=0) {
+        if(max!=0) this.max=max
         this.visibility = View.VISIBLE
     }
 
     protected fun ProgressBar.hide() {
+        this.max=0
         this.visibility = View.GONE
     }
 

@@ -14,4 +14,5 @@
     <string name="sign_up">Sign up</string>
     <string name="other">Other</string>
     <string name="download_file">download file</string>
+    <string name="upload_file">upload file</string>
 </resources>
