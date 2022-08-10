@@ -3,31 +3,50 @@ package com.hearthappy.ktorexpand.code.network
 import io.ktor.http.*
 import java.io.File
 
+
 /**
- * 多文件上传
- * @property partData List<Part>
+ * 文件上传
+ * @property partData PartData? 单文件上传
+ * @property multiPartData ArrayList<PartData>? 多文件上传
  * @property boundary String
  * @constructor
  */
-open class MultipartBody( var partData: PartData? = null,  var multiPartData: ArrayList<PartData>? = null, val boundary: String = generateBoundary()) {
+sealed class MultipartBody(internal var partData: PartData? = null, internal var multiPartData: ArrayList<PartData>? = null, internal var appends: ArrayList<Append>? = null, internal var boundary: String = generateBoundary()) {
 
-
-    companion object : MultipartBody() {
-//        var partData: PartData? = null
-//        var multiPartData: ArrayList<PartData>? = null
-
-        fun part(block: () -> PartData): MultipartBody {
-            partData?.apply { partData = null }
+    class Part(block: () -> PartData) : MultipartBody() {
+        init {
             partData = block()
-            return this
-        }
-
-        fun multiPart(block: (ArrayList<PartData>) -> Unit): MultipartBody {
-            this.multiPartData?.takeIf { it.isNotEmpty() }?.apply { this.clear() } ?: also { multiPartData = arrayListOf() }
-            multiPartData?.apply(block)
-            return this
         }
     }
+
+    class MultiPart(block: (ArrayList<PartData>) -> Unit) : MultipartBody() {
+        init {
+            multiPartData = arrayListOf()
+            multiPartData?.apply(block)
+        }
+    }
+
+
+    fun fromData(block: MultipartBody.() -> Unit): MultipartBody {
+        block()
+        return this
+    }
+
+
+    fun append(key: String, value: Any) {
+        addToAppend(key, value)
+    }
+
+    private fun addToAppend(key: String, value: Any) {
+        appends ?: apply { appends = arrayListOf() }
+        appends?.add(Append(key, value))
+        println("appends:${appends?.size}")
+    }
+
+    fun boundary(boundary: String) {
+        this.boundary = boundary
+    }
+
 }
 
 
@@ -39,4 +58,4 @@ open class MultipartBody( var partData: PartData? = null,  var multiPartData: Ar
  * @property contentDisposition String
  * @constructor
  */
-data class PartData(val key: String, val file: File, val contentDisposition: String? = null, val mediaType: ContentType = ContentType.MultiPart.FormData)
+data class PartData(val key: String, val file: File, val contentDisposition: String? = null, val contentType: ContentType = ContentType.MultiPart.FormData)

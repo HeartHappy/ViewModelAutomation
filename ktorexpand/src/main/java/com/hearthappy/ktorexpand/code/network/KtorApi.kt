@@ -9,6 +9,7 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
+import io.ktor.util.*
 import kotlin.random.Random
 
 internal fun generateBoundary(): String = buildString {
@@ -19,7 +20,7 @@ internal fun generateBoundary(): String = buildString {
 
 internal fun FormBuilder.addAppendToFormData(partData: PartData) {
     append(partData.key, partData.file.readBytes(), headers = Headers.build {
-        append(HttpHeaders.ContentType, partData.mediaType)
+        append(HttpHeaders.ContentType, partData.contentType)
         append(HttpHeaders.ContentDisposition, "filename=${partData.contentDisposition?.run { this } ?: partData.file.name}")
     })
 }
@@ -63,11 +64,15 @@ suspend inline fun HttpClient.deleteRequest(url: String, headers: List<Header>?,
     httpRequestScope()
 }
 
+@OptIn(InternalAPI::class)
 suspend fun HttpClient.multiPartRequest(httpType: Int = POST, url: String, headers: List<Header>?, listener: ProgressListener, multipartBody: MultipartBody): HttpResponse {
     return when (httpType) {
         POST -> postRequest(url, headers) {
             setBody(MultiPartFormDataContent(
                     formData {
+                        multipartBody.appends?.apply {
+                            for (ap in this) append(ap.key, ap.value, ap.headers)
+                        }
                         multipartBody.partData?.apply { addAppendToFormData(this) }
                         multipartBody.multiPartData?.apply { for (partData in this) addAppendToFormData(partData) }
                     },

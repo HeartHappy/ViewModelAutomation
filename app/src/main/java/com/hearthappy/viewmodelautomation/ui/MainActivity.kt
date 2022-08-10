@@ -12,10 +12,7 @@ import com.hearthappy.annotations.AndroidViewModel
 import com.hearthappy.annotations.BindLiveData
 import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.compiler.viewmodel.MainViewModel
-import com.hearthappy.ktorexpand.code.network.MultipartBody
-import com.hearthappy.ktorexpand.code.network.PartData
-import com.hearthappy.ktorexpand.code.network.RequestState
-import com.hearthappy.ktorexpand.code.network.Result
+import com.hearthappy.ktorexpand.code.network.*
 import com.hearthappy.viewmodelautomation.databinding.ActivityMainBinding
 import com.hearthappy.viewmodelautomation.model.request.ReImages
 import com.hearthappy.viewmodelautomation.model.request.ReUploadFile
@@ -125,7 +122,7 @@ class MainActivity : BaseActivity() {
         lifecycleScope.launchWhenCreated {
             viewModel.uploadFileStateFlow.collect {
                 when (it) {
-                    is RequestState.LOADING   -> streamProgressBar.show((file.length()*4).toInt())
+                    is RequestState.LOADING   -> streamProgressBar.show((file.length() * 4).toInt())
                     is RequestState.SUCCEED   -> tvResult.showSucceedMsg(it.body, streamProgressBar)
                     is RequestState.FAILED    -> tvResult.showFailedMsg(it, streamProgressBar)
                     is RequestState.Throwable -> tvResult.showThrowableMsg(it, streamProgressBar)
@@ -151,15 +148,15 @@ class MainActivity : BaseActivity() {
                     }
                     2    -> {
 
-//                        val multipartBody = MultipartBody.part { PartData("file", file = file, contentDisposition = "uploadFileName.png", mediaType = ContentType.Image.PNG) }
+//                        val multipartBody = MultipartBody.Part { PartData("file", file = file, contentDisposition = "uploadFileName.png", mediaType = ContentType.Image.PNG) }
 
-                        val multipartBody = MultipartBody.multiPart { list ->
+                        val multiPart = MultipartBody.MultiPart { list ->
                             list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation1.mp4"))
                             list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation2.mp4"))
                             list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation3.mp4"))
                             list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation4.mp4"))
                         }
-                        viewModel.uploadFile(multipartBody) { bytesSentTotal, contentLength ->
+                        viewModel.uploadFile(multiPart) { bytesSentTotal, contentLength ->
                             streamProgressBar.progress = bytesSentTotal.toInt()
                             Log.d(TAG, "onCreate: bytesSentTotal:$bytesSentTotal,contentLength:$contentLength")
                         }

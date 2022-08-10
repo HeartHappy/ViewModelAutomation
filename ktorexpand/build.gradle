@@ -54,7 +54,6 @@ android {
     defaultConfig {
         minSdk 21
         targetSdk 31
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -73,7 +72,11 @@ android {
         jvmTarget = '1.8'
     }
 }
-
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
+    }
+}
 
 def lifecycleVersion = "2.3.0"
 def ktorVersion = "2.0.3"

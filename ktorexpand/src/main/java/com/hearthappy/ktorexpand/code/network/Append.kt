@@ -1,3 +1,5 @@
 package com.hearthappy.ktorexpand.code.network
 
-data class Append(val key:String,val value:Any)
+import io.ktor.http.*
+
+data class Append(val key:String,val value:Any,val headers: Headers = Headers.Empty)
