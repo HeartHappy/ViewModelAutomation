@@ -21,12 +21,13 @@ suspend fun testFileDownload(fileName: String) {
     }, onFailure = {}, onThrowable = {}, dispatcher = Dispatchers.IO)
 }
 
-suspend inline fun login() = ktorClient().use {
+suspend inline fun ktorRequest() = ktorClient().use {
     it.get("https://ktor.io/") {
         header(HttpHeaders.ContentType, ContentType.Application.Json)
         parameter("price", "asc")
     }
 }
+
 
 /**
  * 测试文件下载示例
@@ -74,7 +75,7 @@ suspend fun testFileUpload(multipartBody: MultipartBody, listener: suspend (byte
 }
 
 
-suspend fun multiFileUpload(partData: List<PartData>, listener: (suspend (bytesSentTotal: Long, contentLength: Long) -> Unit)?) = ktorClient().use {
+internal suspend fun multiFileUpload(partData: List<PartData>, listener: (suspend (bytesSentTotal: Long, contentLength: Long) -> Unit)?) = ktorClient().use {
     val url = "http://192.168.1.240:9998/multipart-upload-json"
 
     it.post(url) {
@@ -98,9 +99,10 @@ suspend fun multiFileUpload(partData: List<PartData>, listener: (suspend (bytesS
 
 fun main() = runBlocking {
     val file = File("/Library/MyComputer/Software/Android/Git/ViewModelAutomation/test.jpeg")
-//    val outFile2 = File("/Library/MyComputer/Software/Android/Git/ViewModelAutomation/2.jpeg")
 
-    println("exist:${file.exists()},${file.name}") //fileDownload(outputStream)
+    println("exist:${file.exists()},${file.name}")
+
+    //fileDownload(outputStream)
 
     //文件上传
     /* launch {
@@ -125,32 +127,19 @@ fun main() = runBlocking {
          })
          println("http:${sendKtorUpload.bodyAsText()}")
      }*/
-    val multipartBody = MultipartBody.Part { PartData("file", file = file, contentDisposition = "uploadFileName.png", contentType = ContentType.Image.PNG) }
-    testFileUpload(multipartBody) { a, b ->
+    val part1 = MultipartBody.Part {
+        part("file", file = file, contentDisposition = "filename=\"uploadFileName.png\"", contentType = ContentType.Image.PNG)
+    }.formData {
+        append("key2", "bbbbb")
+        append("key3", "bbbb2")
+    }
+
+    println("part1:${part1.partData}")
+    println("part1:${part1.appends}")
+
+    testFileUpload(part1) { a, b ->
         println("current:$a,total:$b")
     }
-
-    val part = MultipartBody.Part { PartData("file", file = file, contentDisposition = "ViewModelAutomation1.mp4") }.fromData { listOf(Append(",","")) }
-    println("part:${part.partData}")
-
-    val multiPart = MultipartBody.MultiPart { list ->
-        list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation1.mp4"))
-        list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation2.mp4"))
-        list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation3.mp4"))
-        list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation4.mp4"))
-    }
-    println("address:$multiPart")
-    val fromData = multiPart.fromData {
-        append("key", "aaaa")
-        append("key1", "aaaa1")
-    }
-    println("address:$fromData")
-
-
-    multiPart.multiPartData?.forEach {
-        println("multiPart:$it")
-    }
-    println("appends:${fromData.appends}")
 
     println("end...:")
 }

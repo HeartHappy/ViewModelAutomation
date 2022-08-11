@@ -1,6 +1,7 @@
 package com.hearthappy.viewmodelautomation.ui
 
 import android.Manifest
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
@@ -21,6 +22,7 @@ import com.hearthappy.viewmodelautomation.model.request.ReqDownloadFile
 import com.hearthappy.viewmodelautomation.model.response.ResImages
 import com.hearthappy.viewmodelautomation.model.response.ResVideoList
 import com.hearthappy.viewmodelautomation.ui.base.BaseActivity
+import io.ktor.http.*
 import java.io.File
 import java.io.InputStream
 
@@ -41,7 +43,7 @@ import java.io.InputStream
 class MainActivity : BaseActivity() {
     private val viewModel by viewModels<MainViewModel>()
     private lateinit var viewBinding: ActivityMainBinding
-    private val file = File("${Environment.getExternalStorageDirectory().path}/DCIM/test.mp4")
+    private val file = File("${Environment.getExternalStorageDirectory().path}/DCIM/test.png")
 
     private lateinit var activityResult: ActivityResultLauncher<Array<String>>
     private var operate = 0
@@ -58,7 +60,9 @@ class MainActivity : BaseActivity() {
             registerActivityResult()
 
             btnGetImages.setOnClickListener {
-                viewModel.getImages(0, 5, 1)
+                repeat(10){
+                    viewModel.getImages(0, 5, it)
+                }
             }
 
             btnGetVideoList.setOnClickListener {
@@ -95,7 +99,11 @@ class MainActivity : BaseActivity() {
             viewModel.getImagesStateFlow.collect {
                 when (it) {
                     is RequestState.LOADING   -> progress.show()
-                    is RequestState.SUCCEED   -> tvResult.showSucceedMsg(it.body.toString(), progress)
+                    is RequestState.SUCCEED   -> {
+                        tvResult.showSucceedMsg(it.body.toString(), progress)
+                        //order：接收结果order是传入的值，区分哪次请求的结果。
+                        Log.d(TAG, "viewModelListener--->order: ${it.order}")
+                    }
                     is RequestState.FAILED    -> tvResult.showFailedMsg(it, progress)
                     is RequestState.Throwable -> tvResult.showThrowableMsg(it, progress)
                     else                      -> Unit
@@ -108,9 +116,9 @@ class MainActivity : BaseActivity() {
                     is RequestState.LOADING   -> streamProgressBar.show()
                     is RequestState.SUCCEED   -> {
                         streamProgressBar.hide()
+                        ivShowFile.setImageBitmap(BitmapFactory.decodeStream(it.body))
                         it.body.copyTo(file.outputStream())
 //                        ivShowFile.setImageURI(Uri.fromFile(file))
-//                        ivShowFile.setImageBitmap(BitmapFactory.decodeStream(it.body))
                     }
                     is RequestState.FAILED    -> tvResult.showFailedMsg(it, streamProgressBar)
                     is RequestState.Throwable -> tvResult.showThrowableMsg(it, streamProgressBar)
@@ -122,7 +130,7 @@ class MainActivity : BaseActivity() {
         lifecycleScope.launchWhenCreated {
             viewModel.uploadFileStateFlow.collect {
                 when (it) {
-                    is RequestState.LOADING   -> streamProgressBar.show((file.length() * 4).toInt())
+                    is RequestState.LOADING   -> streamProgressBar.show()
                     is RequestState.SUCCEED   -> tvResult.showSucceedMsg(it.body, streamProgressBar)
                     is RequestState.FAILED    -> tvResult.showFailedMsg(it, streamProgressBar)
                     is RequestState.Throwable -> tvResult.showThrowableMsg(it, streamProgressBar)
@@ -140,22 +148,32 @@ class MainActivity : BaseActivity() {
             else {
                 when (operate) {
                     1    -> {
-                        viewModel.getDownloadFile("01 Rolling In the Deep.m4p") { receive, contentLength ->
-                            streamProgressBar.max = contentLength.toInt()
-                            streamProgressBar.progress = receive.toInt()
+                        viewModel.getDownloadFile("test.png") { receive, contentLength ->
                             Log.d(TAG, "onCreate: receive:$receive,contentLength:$contentLength")
                         }
                     }
                     2    -> {
 
-//                        val multipartBody = MultipartBody.Part { PartData("file", file = file, contentDisposition = "uploadFileName.png", mediaType = ContentType.Image.PNG) }
+//                        val part = MultipartBody.Part { part("file", file = file, contentDisposition = "filename=\"uploadFileName.png\"", contentType = ContentType.Image.PNG) }
 
-                        val multiPart = MultipartBody.MultiPart { list ->
-                            list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation1.mp4"))
-                            list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation2.mp4"))
-                            list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation3.mp4"))
-                            list.add(PartData("file", file = file, contentDisposition = "ViewModelAutomation4.mp4"))
+                        val multiPart = MultipartBody.MultiPart {
+                            //方式一：自定义headers构建part
+                            part("file", file = file, headers = Headers.build {
+                                append(HttpHeaders.ContentType, ContentType.Video.MP4)
+                                append(HttpHeaders.ContentDisposition, "filename=\"ViewModelAutomation1.png\"")
+                            })
+                            //方式二：上传并指定文件名称
+                            part("file", file = file, contentDisposition = "filename=\"ViewModelAutomation2.png\"", contentType = ContentType.Video.MP4)
+                            //方式三：上传使用原有文件名
+                            part("file", file = file)
+                        }.formData {
+                            append("description", "ViewModelAutomation")
+                            append("username", "Leonardo DiCaprio")
+                            append("password", "123456")
                         }
+
+
+                        streamProgressBar.show(multiPart.contentLength.toInt())
                         viewModel.uploadFile(multiPart) { bytesSentTotal, contentLength ->
                             streamProgressBar.progress = bytesSentTotal.toInt()
                             Log.d(TAG, "onCreate: bytesSentTotal:$bytesSentTotal,contentLength:$contentLength")

@@ -52,19 +52,21 @@ suspend inline fun <reified R> requestHandler(crossinline io: suspend () -> Http
 
 suspend inline fun <reified R> responseHandler(response: HttpResponse, dispatcher: CoroutineDispatcher, crossinline onSucceed: (R, HttpResponse) -> Unit, crossinline onFailure: (FailedBody) -> Unit) {
     if (response.status.value in succeedCode) {
-        println("HttpClient---> Result onSucceed:${response.status.value},Class:${R::class.java}")
         when (R::class) {
             String::class      -> {
                 val bodyString = response.bodyAsText()
+                println("HttpClient---> Result onSucceed:${response.status.value},String:$bodyString")
                 withMainCoroutine(dispatcher) { onSucceed(bodyString as R, response) }
             }
             InputStream::class -> {
                 val inputStream = response.bodyAsChannel().toInputStream()
+                println("HttpClient---> Result onSucceed:${response.status.value},InputStream")
                 withMainCoroutine(dispatcher) { onSucceed(inputStream as R, response) }
             }
             else               -> {
                 //返回转换后对象类型
                 val body = response.body<R>()
+                println("HttpClient---> Result onSucceed:${response.status.value},Json:$body")
                 withMainCoroutine(dispatcher) { onSucceed(body, response) }
             }
         }

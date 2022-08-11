@@ -57,11 +57,20 @@ data class ReSendVerificationCode(val mail: String)
 @Body
 data class ReRegister(val account: String, val code: String, val password: String)
 
-
+/**
+ * 文件下载
+ * @property fileName String
+ * @constructor
+ */
 @Streaming
 @Request(Http.GET, urlString = "/fs/{fileName}", serviceKey = "fileOperate")
 data class ReqDownloadFile(val fileName: String)
 
+/**
+ * 文件上传
+ * @property multipartBody MultipartBody
+ * @constructor
+ */
 @Multipart
 @Request(Http.POST, urlString = "/multipart-upload-json", serviceKey = "fileOperate")
 data class ReUploadFile(val multipartBody: MultipartBody)

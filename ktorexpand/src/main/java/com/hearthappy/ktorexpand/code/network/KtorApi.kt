@@ -19,10 +19,9 @@ internal fun generateBoundary(): String = buildString {
 }.take(70)
 
 internal fun FormBuilder.addAppendToFormData(partData: PartData) {
-    append(partData.key, partData.file.readBytes(), headers = Headers.build {
-        append(HttpHeaders.ContentType, partData.contentType)
-        append(HttpHeaders.ContentDisposition, "filename=${partData.contentDisposition?.run { this } ?: partData.file.name}")
-    })
+    append(partData.key, partData.file.readBytes(), headers = if (partData.headers == Headers.Empty) Headers.build {
+        fileHeader(partData.contentType, partData.contentDisposition?.run { this }?:"filename=${partData.file.name}")
+    } else partData.headers)
 }
 
 /**
@@ -32,6 +31,11 @@ internal fun FormBuilder.addAppendToFormData(partData: PartData) {
 private fun HttpRequestBuilder.jsonHeader() = header(HttpHeaders.ContentType, ContentType.Application.Json)
 
 val textHeader = Header(HttpHeaders.ContentType, ContentType.Text.Plain)
+
+fun HeadersBuilder.fileHeader(contentType: ContentType, contentDisposition: String) {
+    append(HttpHeaders.ContentType, contentType)
+    append(HttpHeaders.ContentDisposition, contentDisposition)
+}
 
 /**
  * 处理headers
