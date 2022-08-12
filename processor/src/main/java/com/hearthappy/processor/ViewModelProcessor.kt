@@ -44,7 +44,6 @@ class ViewModelProcessor : AbstractProcessor() { //导包所需
             val generatedSource = processingEnv.options[KAPT_KOTLIN_GENERATED] ?: run {
                 return sendErrorMsg("Can't find target source.")
             }
-            println("processAnnotations")
             startingTime = System.currentTimeMillis()
 
             val timeMillis = measureTimeMillis {
@@ -61,7 +60,7 @@ class ViewModelProcessor : AbstractProcessor() { //导包所需
 
 
     private fun generatedFinish(): Boolean {
-        println("==================> build complete.Takes ${System.currentTimeMillis() - startingTime}ms")
+//        println("==================> build complete.Takes ${System.currentTimeMillis() - startingTime}ms")
         return false
     }
 
