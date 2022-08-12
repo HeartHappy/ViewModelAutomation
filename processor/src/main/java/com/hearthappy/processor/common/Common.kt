@@ -34,7 +34,6 @@ const val NETWORK_DOWNLOAD = "sendKtorDownload"
 const val NETWORK_UPLOAD = "sendKtorUpload"
 const val NETWORK_CONTENT_TYPE = "ContentType"
 const val NETWORK_HEADER = "Header"
-const val NETWORK_Part = "Part"
 const val NETWORK_MultipartBody = "MultipartBody"
 
 //ktor package

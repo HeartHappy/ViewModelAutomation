@@ -4,19 +4,24 @@ import com.hearthappy.annotations.AndroidViewModel
 import com.hearthappy.annotations.BindLiveData
 import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.processor.common.*
+import com.hearthappy.processor.model.RequestData
 import com.hearthappy.processor.model.ServiceConfigData
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.TypeSpec
 import java.io.File
 import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.element.Element
+import kotlin.system.measureTimeMillis
 
 internal fun ViewModelProcessor.generateAndroidViewModelFile(roundEnv: RoundEnvironment, androidViewModelElements: MutableSet<out Element>, generatedSource: String, serviceConfigList: List<ServiceConfigData>): Boolean {
     if (androidViewModelElements.isEmpty()) {
         return sendErrorMsg("The AndroidViewModel annotation was not found. Please declare AndroidViewModel annotations for Activity or Fragment")
     }
 
+    val requestDataMap = getRequestDataMap(roundEnv, serviceConfigList)
     //获取并封装所有请求
-    val requestDataList = getRequestDataList(roundEnv, serviceConfigList)
     for (avmElement in androidViewModelElements) {
         val androidViewModelAnt = avmElement.getAnnotation(AndroidViewModel::class.java)
         val bindLiveDataAnt = avmElement.getAnnotationsByType(BindLiveData::class.java)
@@ -34,13 +39,13 @@ internal fun ViewModelProcessor.generateAndroidViewModelFile(roundEnv: RoundEnvi
 
 
         //通过BindLiveData创建属性、方法
-        generatePropertyAndMethodByLiveData(generateClass, requestDataList, bindLiveDataAnt) { bld, requestData, viewModelParam ->
+        generatePropertyAndMethodByLiveData(generateClass, requestDataMap, bindLiveDataAnt) { bld, requestData, viewModelParam ->
             sendNoteMsg("==================> Create function: ${bld.methodName}") //通过类型别名创建函数参数
             generateFunctionByLiveData(bld, requestData, viewModelParam, generateClass, collectRequiredImport)
         }
 
         //通过BindStateFlow创建属性、方法
-        generatePropertyAndMethodByStateFlow(generateClass, requestDataList, bindStateFlowAnt) { bsf, requestData, viewModelParam ->
+        generatePropertyAndMethodByStateFlow(generateClass, requestDataMap, bindStateFlowAnt) { bsf, requestData, viewModelParam ->
             sendNoteMsg("==================> Create function: ${bsf.methodName}") //创建公开属性
             generateFunctionByStateFlow(bsf, requestData, viewModelParam, generateClass, collectRequiredImport)
         }
@@ -55,7 +60,7 @@ internal fun ViewModelProcessor.generateAndroidViewModelFile(roundEnv: RoundEnvi
 private fun extractName(className: String) = when {
     className.contains("Activity") -> className.substringBefore("Activity")
     className.contains("Fragment") -> className.substringBefore("Fragment")
-    else -> className
+    else                           -> className
 }
 
 internal fun ViewModelProcessor.generateFileAndWrite(viewModelClassName: String, generateClass: TypeSpec.Builder, generatedSource: String, serviceConfigList: List<ServiceConfigData>, collectRequiredImport: List<String>) { //创建文件
@@ -67,7 +72,7 @@ internal fun ViewModelProcessor.generateFileAndWrite(viewModelClassName: String,
         //                .addTypeAlias(typeAlias).build() //文件内添加类型别名
         if (requiredImport.isNotEmpty()) {
             addImport(NETWORK_PKG, requiredImport)
-            if(requiredImport.size>1){
+            if (requiredImport.size > 1) {
                 addImport(KTOR_CLIENT_REQUEST_PKG, KTOR_PARAMETER)
                 //            addImport(KTOR_CLIENT_RESPONSE_PKG, HTTP_RESPONSE)
                 addImport(KTOR_HTTP_PKG, KTOR_HTTP_RESPONSE, NETWORK_CONTENT_TYPE)

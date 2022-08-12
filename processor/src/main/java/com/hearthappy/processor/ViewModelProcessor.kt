@@ -11,6 +11,7 @@ import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
 import javax.lang.model.element.Element
 import javax.lang.model.element.TypeElement
+import kotlin.system.measureTimeMillis
 
 /**
  * @Author ChenRui
@@ -23,26 +24,18 @@ import javax.lang.model.element.TypeElement
  * FunSpec.addComment("AA"):为函数尾部添加注释  fun(){}  //AA
  * FunSpec.addKdoc("BB"):为函数顶部添加文本注释 /**BB*/ fun(){}
  */
-@AutoService(Processor::class) class ViewModelProcessor : AbstractProcessor() { //导包所需
+@AutoService(Processor::class)
+class ViewModelProcessor : AbstractProcessor() { //导包所需
 
     private var startingTime = 0L
     override fun getSupportedSourceVersion(): SourceVersion = SourceVersion.latestSupported()
 
-    override fun getSupportedAnnotationTypes(): MutableSet<String> = mutableSetOf(
-        AndroidViewModel::class.java.name,
-        BindLiveData::class.java.name,
-        BindStateFlow::class.java.name,
-        Request::class.java.name,
-        Body::class.java.name,
-        Service::class.java.name,
-        ServiceConfig::class.java.name
-    )
+    override fun getSupportedAnnotationTypes(): MutableSet<String> = mutableSetOf(AndroidViewModel::class.java.name, Service::class.java.name)
 
     override fun process(
         annotations: MutableSet<out TypeElement>?,
         roundEnv: RoundEnvironment?,
-    ): Boolean = roundEnv?.processingOver()?.takeIf { it }
-        ?.apply { generatedFinish() } ?: processAnnotations(roundEnv)
+    ): Boolean = roundEnv?.processingOver()?.takeIf { it }?.run { generatedFinish() } ?: processAnnotations(roundEnv)
 
     private fun processAnnotations(
         roundEnv: RoundEnvironment?,
@@ -51,22 +44,25 @@ import javax.lang.model.element.TypeElement
             val generatedSource = processingEnv.options[KAPT_KOTLIN_GENERATED] ?: run {
                 return sendErrorMsg("Can't find target source.")
             }
+            println("processAnnotations")
             startingTime = System.currentTimeMillis()
-            val androidViewModelElements =
-                getElementsAnnotatedWith(AndroidViewModel::class.java) //            return handlerAndroidViewModelAnt(androidViewModelElements, this)
-            val serviceElements = getElementsAnnotatedWith(Service::class.java)
-            val serviceConfigList = getServiceConfigList(serviceElements)
-            generateServiceConfigFile(serviceConfigList, generatedSource)
-            generateAndroidViewModelFile(
-                this, androidViewModelElements, generatedSource, serviceConfigList
-            )
+
+            val timeMillis = measureTimeMillis {
+                val androidViewModelElements = getElementsAnnotatedWith(AndroidViewModel::class.java) //            return handlerAndroidViewModelAnt(androidViewModelElements, this)
+                val serviceElements = getElementsAnnotatedWith(Service::class.java)
+                val serviceConfigList = getServiceConfigList(serviceElements)
+                generateServiceConfigFile(serviceConfigList, generatedSource)
+                generateAndroidViewModelFile(this, androidViewModelElements, generatedSource, serviceConfigList)
+            }
+            sendNoteMsg("==================> The build is complete, it takes ${timeMillis}ms")
+            true
         } ?: sendErrorMsg("RoundEnvironment is null hence skip the process.")
     }
 
 
     private fun generatedFinish(): Boolean {
         println("==================> build complete.Takes ${System.currentTimeMillis() - startingTime}ms")
-        return true
+        return false
     }
 
 
@@ -85,13 +81,13 @@ import javax.lang.model.element.TypeElement
     fun outElementLog(tag: Any, element: Element?) {
         element ?: return
         val value = when (tag) {
-            TAG_REQUEST -> Request::class.java
-            TAG_HEADER -> Header::class.java
-            TAG_BODY -> Body::class.java
-            TAG_QUERY -> Query::class.java
+            TAG_REQUEST     -> Request::class.java
+            TAG_HEADER      -> Header::class.java
+            TAG_BODY        -> Body::class.java
+            TAG_QUERY       -> Query::class.java
             TAG_BASE_CONFIG -> ServiceConfig::class.java
-            TAG_ORDER -> Order::class.java
-            else -> Request::class.java
+            TAG_ORDER       -> Order::class.java
+            else            -> Request::class.java
         }
 
         sendNoteMsg("======================<Gorgeous dividing line>=======================")

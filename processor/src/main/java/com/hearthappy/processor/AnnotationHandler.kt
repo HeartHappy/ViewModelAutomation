@@ -3,7 +3,6 @@ package com.hearthappy.processor
 import com.hearthappy.annotations.*
 import com.hearthappy.processor.common.KTOR_PROGRESS_PKG
 import com.hearthappy.processor.common.NETWORK_MultipartBody
-import com.hearthappy.processor.common.NETWORK_Part
 import com.hearthappy.processor.common.NETWORK_PKG
 import com.hearthappy.processor.model.*
 import com.hearthappy.processor.tools.asRest
@@ -19,7 +18,7 @@ import javax.lang.model.element.ElementKind
  * Create RequestData
  * @param roundEnv RoundEnvironment
  */
-internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, createServiceConfigList: List<ServiceConfigData>): List<RequestData> { //获取所有注解，将请求集中在一起
+internal fun ViewModelProcessor.getRequestDataMap(roundEnv: RoundEnvironment, createServiceConfigList: List<ServiceConfigData>): Map<String,RequestData> { //获取所有注解，将请求集中在一起
     val requestElements = roundEnv.getElementsAnnotatedWith(Request::class.java)
     val headersElements = roundEnv.getElementsAnnotatedWith(Header::class.java)
     val fixedHeadersElements = roundEnv.getElementsAnnotatedWith(Headers::class.java)
@@ -38,7 +37,7 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
 
 
     //创建请求集合
-    val requestDataList = mutableListOf<RequestData>()
+    val requestDataList = mutableMapOf<String,RequestData>()
 
     return requestDataList.apply {
         for (requestElement in requestElements) {
@@ -80,8 +79,7 @@ internal fun ViewModelProcessor.getRequestDataList(roundEnv: RoundEnvironment, c
             val requestParameters: List<String> = getRequestParameters(methodParameters, requestAnt, headers, requestBodyData, order, multiPartParameter)
 
             val requestData = RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData, order, streamingParameters, multiPartParameters)
-            add(requestData)
-
+            this[requestClass]=requestData
             //sendNoteMsg("【RequestData】:$requestData")
         }
     }

@@ -19,8 +19,8 @@ internal fun generateFunctionByLiveData(it: BindLiveData, requestData: RequestDa
     val function = FunSpec.builder(it.methodName).apply {
         generateMethodParametersSpec(requestData)
         generateMethodRequestScope(requestData, viewModelParam, requiredImport)
+        addStatement("onSucceed = { body, response ->${viewModelParam.priPropertyName}.postValue(Result.Success(body,response${addOrder(requestData)}))},")
         addStatement("onFailure = { ${viewModelParam.priPropertyName}.postValue(Result.Failed(it${addOrder(requestData)}))},")
-        addStatement("onSucceed = { body, _ ->${viewModelParam.priPropertyName}.postValue(Result.Success(body${addOrder(requestData)}))},")
         addStatement("onThrowable = { ${viewModelParam.priPropertyName}.postValue(Result.Throwable(it${addOrder(requestData)}))}")
         addStatement(")")
     }
@@ -33,8 +33,8 @@ internal fun generateFunctionByStateFlow(it: BindStateFlow, requestData: Request
         generateMethodParametersSpec(requestData)
         addStatement("${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.LOADING")
         generateMethodRequestScope(requestData, viewModelParam, requiredImport)
-        addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.FAILED(it${addOrder(requestData)}) },")
         addStatement("onSucceed = { body,response-> ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.SUCCEED(body,response${addOrder(requestData)}) },")
+        addStatement("onFailure = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.FAILED(it${addOrder(requestData)}) },")
         addStatement("onThrowable = { ${viewModelParam.priPropertyName}.value = ${NETWORK_REQUEST_STATE}.Throwable(it${addOrder(requestData)}) }")
         addStatement(")")
     }
