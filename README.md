@@ -6,9 +6,8 @@
 
 - 框架优势：通过提供的注解自动生成ViewModel层的LiveData、StateFlow，以及网络请求。节省您大量的开发时间
 - 交流方式： 
-   -   1、 Q群：570377751
-   -   2、欢迎使用issues提建议或bug
-   -   3、欢迎Star以兹鼓励
+   -   1、欢迎使用issues提建议或bug
+   -   2、欢迎Star以兹鼓励
 
   
 
