@@ -73,10 +73,6 @@ data class ReVMHardwareInfo(@Header("X-Auth-Token") val token: String, val flavo
 
 ##### 7、添加header
 
-```
-
-##### 7、添加header
-
 ```kotlin
 /**
  * @annotation @Headers([ContentType.xxx.xxx]):固定Headers
