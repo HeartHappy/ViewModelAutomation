@@ -74,3 +74,4 @@ data class ReqDownloadFile(val fileName: String)
 @Multipart
 @Request(Http.POST, urlString = "/multipart-upload-json", serviceKey = "fileOperate")
 data class ReUploadFile(val multipartBody: MultipartBody)
+
