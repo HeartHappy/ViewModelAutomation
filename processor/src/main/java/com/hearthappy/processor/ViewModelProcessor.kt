@@ -17,7 +17,7 @@ import kotlin.system.measureTimeMillis
  * @Author ChenRui
  * @Date   2021/12/27-16:46
  * @Email  1096885636@qq.com
- * ClassDescription :
+ * ClassDescription : 注解处理类
  * kotlin poet:
  * liveData.parameterizedBy(responseBean):liveData：声明类型，responseBean：泛型类型
  * FunSpec.addTypeVariable(TypeVariableName("T")) : 函数泛型 ：fun <T> add()

@@ -47,10 +47,10 @@
 
 |   参数   | 类型     |                      描述                       | 必须 | 默认值 |
 | :------: | -------- | :---------------------------------------------: | :--: | :----: |
-| bodyType | BodyType | 类型：支持TEXT、JSON、FORM_DATA、FormUrlEncoded |  否  |  JSON  |
+| bodyType | BodyType | 类型：支持TEXT、JSON、FormData、FormUrlEncoded |  否  |  JSON  |
 
 ##### 7、@Query
-###### 描述：生成formData请求时使用。Body类型为FORM_DATA时，必须添加该注解修饰参数
+###### 描述：生成formData请求时使用。Body类型为FormData时，必须添加该注解修饰参数
 
 | 参数  | 类型   | 描述 | 必须 | 默认值 |
 | :---: | ------ | :--: | :--: | :----: |

@@ -4,7 +4,6 @@ import com.hearthappy.annotations.AndroidViewModel
 import com.hearthappy.annotations.BindLiveData
 import com.hearthappy.annotations.BindStateFlow
 import com.hearthappy.processor.common.*
-import com.hearthappy.processor.model.RequestData
 import com.hearthappy.processor.model.ServiceConfigData
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.KModifier
@@ -13,7 +12,6 @@ import com.squareup.kotlinpoet.TypeSpec
 import java.io.File
 import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.element.Element
-import kotlin.system.measureTimeMillis
 
 internal fun ViewModelProcessor.generateAndroidViewModelFile(roundEnv: RoundEnvironment, androidViewModelElements: MutableSet<out Element>, generatedSource: String, serviceConfigList: List<ServiceConfigData>): Boolean {
     if (androidViewModelElements.isEmpty()) {

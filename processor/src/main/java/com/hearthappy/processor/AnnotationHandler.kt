@@ -80,7 +80,7 @@ internal fun ViewModelProcessor.getRequestDataMap(roundEnv: RoundEnvironment, cr
 
             val requestData = RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData, order, streamingParameters, multiPartParameters)
             this[requestClass]=requestData
-            //sendNoteMsg("【RequestData】:$requestData")
+            sendNoteMsg("【RequestData】:$requestData")
         }
     }
 }
@@ -111,10 +111,10 @@ private fun ViewModelProcessor.getMethodParameters(requestElement: Element, body
         BodyType.JSON, BodyType.FormUrlEncoded -> parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
         BodyType.HTML                          -> {
         }
-        BodyType.XML                           -> {
+        BodyType.XML      -> {
         }
-        BodyType.FORM_DATA                     -> parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
-        else                                   -> {
+        BodyType.FormData -> parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
+        else              -> {
         }
     }
     order?.let { parameters.add(ParameterData(it, "Int")) }
@@ -342,7 +342,7 @@ private fun getCurrentBodyQueryMap(currentBodyElement: Element, queryElements: M
  */
 private fun ViewModelProcessor.createRequestBodyData(bodyType: BodyType, currentBodyElement: Element, queryElements: MutableSet<out Element>): RequestBodyData {
     val currentBodyParameterName = getCurrentBodyParameterName(currentBodyElement)
-    return if (bodyType == BodyType.FormUrlEncoded || bodyType == BodyType.FORM_DATA) { //创建XWF数据类型所需的参数@Query列表
+    return if (bodyType == BodyType.FormUrlEncoded || bodyType == BodyType.FormData) { //创建XWF数据类型所需的参数@Query列表
         val currentBodyQueryMap = getCurrentBodyQueryMap(currentBodyElement, queryElements)
         if (currentBodyQueryMap.isEmpty()) sendErrorMsg("The request class is ${currentBodyElement.asType()}, the specified BodyType is FormUrlEncoded, but the Query annotation is not declared, resulting in an error")
         RequestBodyData(bodyType, xwfParameters = currentBodyParameterName?.run { Pair(this, currentBodyQueryMap) })

@@ -98,9 +98,9 @@ internal suspend fun multiFileUpload(partData: List<PartData>, listener: (suspen
 
 
 fun main() = runBlocking {
-    val file = File("/Library/MyComputer/Software/Android/Git/ViewModelAutomation/test.jpeg")
+//    val file = File("/Library/MyComputer/Software/Android/Git/ViewModelAutomation/test.jpeg")
 
-    println("exist:${file.exists()},${file.name}")
+//    println("exist:${file.exists()},${file.name}")
 
     //fileDownload(outputStream)
 
@@ -127,7 +127,9 @@ fun main() = runBlocking {
          })
          println("http:${sendKtorUpload.bodyAsText()}")
      }*/
-    val part1 = MultipartBody.Part {
+
+    //上传
+    /*val part1 = MultipartBody.Part {
         part("file", file = file, contentDisposition = "filename=\"uploadFileName.png\"", contentType = ContentType.Image.PNG)
     }.formData {
         append("key2", "bbbbb")
@@ -141,5 +143,5 @@ fun main() = runBlocking {
         println("current:$a,total:$b")
     }
 
-    println("end...:")
+    println("end...:")*/
 }
