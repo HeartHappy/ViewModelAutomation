@@ -98,6 +98,8 @@ internal suspend fun multiFileUpload(partData: List<PartData>, listener: (suspen
 
 
 fun main() = runBlocking {
+
+
 //    val file = File("/Library/MyComputer/Software/Android/Git/ViewModelAutomation/test.jpeg")
 
 //    println("exist:${file.exists()},${file.name}")
@@ -144,4 +146,10 @@ fun main() = runBlocking {
     }
 
     println("end...:")*/
+
+
+}
+
+data class RequestData(val requestType: String, val ver: String, val biz: Biz) {
+    class Biz
 }

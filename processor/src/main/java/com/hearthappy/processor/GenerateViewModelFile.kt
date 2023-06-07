@@ -14,9 +14,9 @@ import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.element.Element
 
 internal fun ViewModelProcessor.generateAndroidViewModelFile(roundEnv: RoundEnvironment, androidViewModelElements: MutableSet<out Element>, generatedSource: String, serviceConfigList: List<ServiceConfigData>): Boolean {
-    if (androidViewModelElements.isEmpty()) {
+    /*if (androidViewModelElements.isEmpty()) {
         return sendErrorMsg("The AndroidViewModel annotation was not found. Please declare AndroidViewModel annotations for Activity or Fragment")
-    }
+    }*/
 
     val requestDataMap = getRequestDataMap(roundEnv, serviceConfigList)
     //获取并封装所有请求

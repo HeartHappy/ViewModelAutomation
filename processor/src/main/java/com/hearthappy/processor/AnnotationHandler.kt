@@ -4,6 +4,7 @@ import com.hearthappy.annotations.*
 import com.hearthappy.processor.common.KTOR_PROGRESS_PKG
 import com.hearthappy.processor.common.NETWORK_MultipartBody
 import com.hearthappy.processor.common.NETWORK_PKG
+import com.hearthappy.processor.common.TAG_COOKIE
 import com.hearthappy.processor.model.*
 import com.hearthappy.processor.tools.asRest
 import com.hearthappy.processor.tools.findRest
@@ -18,9 +19,10 @@ import javax.lang.model.element.ElementKind
  * Create RequestData
  * @param roundEnv RoundEnvironment
  */
-internal fun ViewModelProcessor.getRequestDataMap(roundEnv: RoundEnvironment, createServiceConfigList: List<ServiceConfigData>): Map<String,RequestData> { //获取所有注解，将请求集中在一起
+internal fun ViewModelProcessor.getRequestDataMap(roundEnv: RoundEnvironment, createServiceConfigList: List<ServiceConfigData>): Map<String, RequestData> { //获取所有注解，将请求集中在一起
     val requestElements = roundEnv.getElementsAnnotatedWith(Request::class.java)
     val headersElements = roundEnv.getElementsAnnotatedWith(Header::class.java)
+    val cookiesElements = roundEnv.getElementsAnnotatedWith(Cookie::class.java)
     val fixedHeadersElements = roundEnv.getElementsAnnotatedWith(Headers::class.java)
     val bodyElements = roundEnv.getElementsAnnotatedWith(Body::class.java).filterCopy()
     val queryElements = roundEnv.getElementsAnnotatedWith(Query::class.java).filterCopy()
@@ -35,9 +37,11 @@ internal fun ViewModelProcessor.getRequestDataMap(roundEnv: RoundEnvironment, cr
     //        outElementsAllLog(TAG_SITE, siteElements)
     //    outElementsAllLog(TAG_ORDER, orderElements)
 
+    outElementsAllLog(TAG_COOKIE, cookiesElements)
+
 
     //创建请求集合
-    val requestDataList = mutableMapOf<String,RequestData>()
+    val requestDataList = mutableMapOf<String, RequestData>()
 
     return requestDataList.apply {
         for (requestElement in requestElements) {
@@ -51,6 +55,9 @@ internal fun ViewModelProcessor.getRequestDataMap(roundEnv: RoundEnvironment, cr
             //获取请求头
             val headers = headersElements.getRequestHeaders(requestClass).map {
                 HeaderData(it.getAnnotation(Header::class.java).value, it.simpleName.toString())
+            }
+            val cookies = cookiesElements.getRequestHeaders(requestClass).map {
+                CookieData(it.getAnnotation(Cookie::class.java).value, it.simpleName.toString())
             }
 
             //获取固定headers请求头
@@ -73,14 +80,14 @@ internal fun ViewModelProcessor.getRequestDataMap(roundEnv: RoundEnvironment, cr
 
             val multiPartParameters = multiPart?.run { methodParameters.filter { it.parameterType == NETWORK_PKG.plus(".$NETWORK_MultipartBody") }.takeIf { it.isNotEmpty() }?.run { this.plus(ParameterData("listener", KTOR_PROGRESS_PKG)) } }
             //获取需要过滤的方法参数名
-            val multiPartParameter = multiPartParameters?.find { it.parameterType== NETWORK_PKG.plus(".$NETWORK_MultipartBody")}?.run { this.parameterName }
+            val multiPartParameter = multiPartParameters?.find { it.parameterType == NETWORK_PKG.plus(".$NETWORK_MultipartBody") }?.run { this.parameterName }
 
             //获取请求参数
-            val requestParameters: List<String> = getRequestParameters(methodParameters, requestAnt, headers, requestBodyData, order, multiPartParameter)
+            val requestParameters: List<String> = getRequestParameters(methodParameters, requestAnt, headers, requestBodyData, order, multiPartParameter, cookies)
 
-            val requestData = RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData, order, streamingParameters, multiPartParameters)
-            this[requestClass]=requestData
-//            sendNoteMsg("【RequestData】:$requestData")
+            val requestData = RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData, order, streamingParameters, multiPartParameters, cookies)
+            this[requestClass] = requestData
+            sendNoteMsg("【RequestData】:$requestData")
         }
     }
 }
@@ -111,10 +118,10 @@ private fun ViewModelProcessor.getMethodParameters(requestElement: Element, body
         BodyType.JSON, BodyType.FormUrlEncoded -> parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
         BodyType.HTML                          -> {
         }
-        BodyType.XML      -> {
+        BodyType.XML                           -> {
         }
-        BodyType.FormData -> parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
-        else              -> {
+        BodyType.FormData                      -> parameters.addAll(getMethodParameterByBodyKind(bodyElements, requestElement))
+        else                                   -> {
         }
     }
     order?.let { parameters.add(ParameterData(it, "Int")) }
@@ -275,10 +282,11 @@ private fun getCurrentBodyType(bodyElement: Element): BodyType {
  * @param requestBodyData: String 根据BodyType过滤的对应注解的参数（@Body、@FormUrlEncoded）
  * @return List<String>
  */
-private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Request, headers: List<HeaderData>, requestBodyData: RequestBodyData?, orderParamName: String?, multiPartParamName: String?): List<String> {
+private fun getRequestParameters(parameters: List<ParameterData>, requestAnt: Request, headers: List<HeaderData>, requestBodyData: RequestBodyData?, orderParamName: String?, multiPartParamName: String?, cookies: List<CookieData>): List<String> {
 
     //过滤headers参数
-    val filterHeaderParameters = (parameters.map { it.parameterName } subtract headers.map { it.parameterName }.toSet()).toList()
+    val filterHeaderParameters = (parameters.map { it.parameterName } subtract headers.map { it.parameterName }.toSet() subtract cookies.map { it.parameterName }.toSet()).toList()
+
 
     //过滤rest参数
     val filterRestParameters = filterHeaderParameters.filterRestParameters(requestAnt.urlString)

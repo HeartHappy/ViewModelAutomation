@@ -47,8 +47,9 @@ class ViewModelProcessor : AbstractProcessor() { //导包所需
             startingTime = System.currentTimeMillis()
 
             val timeMillis = measureTimeMillis {
-                val androidViewModelElements = getElementsAnnotatedWith(AndroidViewModel::class.java) //            return handlerAndroidViewModelAnt(androidViewModelElements, this)
+                val androidViewModelElements = getElementsAnnotatedWith(AndroidViewModel::class.java)
                 val serviceElements = getElementsAnnotatedWith(Service::class.java)
+                if(androidViewModelElements.isEmpty()) return true
                 val serviceConfigList = getServiceConfigList(serviceElements)
                 generateServiceConfigFile(serviceConfigList, generatedSource)
                 generateAndroidViewModelFile(this, androidViewModelElements, generatedSource, serviceConfigList)
@@ -86,6 +87,7 @@ class ViewModelProcessor : AbstractProcessor() { //导包所需
             TAG_QUERY       -> Query::class.java
             TAG_BASE_CONFIG -> ServiceConfig::class.java
             TAG_ORDER       -> Order::class.java
+            TAG_COOKIE      -> Cookie::class.java
             else            -> Request::class.java
         }
 

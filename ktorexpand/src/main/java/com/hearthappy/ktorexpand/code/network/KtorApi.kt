@@ -48,30 +48,38 @@ fun HttpRequestBuilder.handleHeaders(headers: List<Header>?) {
     headers?.apply { for (header in this) header(header.key, header.value) }
 }
 
-suspend inline fun HttpClient.getRequest(url: String, headers: List<Header>?, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = get(urlString = url) {
+fun HttpRequestBuilder.handlerCookies(cookies:List<Cookie>?){
+    cookies?.apply { for (cookie in this) cookie(cookie.name, cookie.value) }
+}
+
+suspend inline fun HttpClient.getRequest(url: String, headers: List<Header>?,cookies: List<Cookie>?=null, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = get(urlString = url) {
+    handlerCookies(cookies)
     handleHeaders(headers)
     httpRequestScope()
 }
 
-suspend inline fun HttpClient.postRequest(url: String, headers: List<Header>?, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = post(urlString = url) {
+suspend inline fun HttpClient.postRequest(url: String, headers: List<Header>?, cookies: List<Cookie>?=null,httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = post(urlString = url) {
+    handlerCookies(cookies)
     handleHeaders(headers)
     httpRequestScope()
 }
 
-suspend inline fun HttpClient.patchRequest(url: String, headers: List<Header>?, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = patch(urlString = url) {
+suspend inline fun HttpClient.patchRequest(url: String, headers: List<Header>?,cookies: List<Cookie>?=null, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = patch(urlString = url) {
+    handlerCookies(cookies)
     handleHeaders(headers)
     httpRequestScope()
 }
 
-suspend inline fun HttpClient.deleteRequest(url: String, headers: List<Header>?, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = delete(urlString = url) {
+suspend inline fun HttpClient.deleteRequest(url: String, headers: List<Header>?,cookies: List<Cookie>?=null, httpRequestScope: HttpRequestBuilder.() -> Unit): HttpResponse = delete(urlString = url) {
+    handlerCookies(cookies)
     handleHeaders(headers)
     httpRequestScope()
 }
 
 @OptIn(InternalAPI::class)
-suspend fun HttpClient.multiPartRequest(httpType: Int = POST, url: String, headers: List<Header>?, listener: ProgressListener, multipartBody: MultipartBody): HttpResponse {
+suspend fun HttpClient.multiPartRequest(httpType: Int = POST, url: String, headers: List<Header>?,cookies: List<Cookie>?=null, listener: ProgressListener, multipartBody: MultipartBody): HttpResponse {
     return when (httpType) {
-        POST -> postRequest(url, headers) {
+        POST -> postRequest(url, headers,cookies) {
             setBody(MultiPartFormDataContent(
                     formData {
                         multipartBody.appends?.apply {
@@ -97,16 +105,16 @@ suspend fun HttpClient.multiPartRequest(httpType: Int = POST, url: String, heade
  * @param defaultConfig DefaultConfig
  * @return HttpResponse
  */
-suspend fun sendKtorDownload(httpType: Int = GET, url: String, headers: List<Header>? = null, listener: ProgressListener = { _, _ -> }, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
+suspend fun sendKtorDownload(httpType: Int = GET, url: String, headers: List<Header>? = null,cookies: List<Cookie>?=null, listener: ProgressListener = { _, _ -> }, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
     when (httpType) {
-        GET  -> it.getRequest(url, headers) { onDownload(listener) }
-        POST -> it.postRequest(url, headers) { onDownload(listener) }
+        GET  -> it.getRequest(url, headers,cookies) { onDownload(listener) }
+        POST -> it.postRequest(url, headers,cookies) { onDownload(listener) }
         else -> throw RuntimeException("sendKtorDownload not implemented yet，The current RequestType value is $httpType")
     }
 }
 
-suspend fun sendKtorUpload(httpType: Int = POST, url: String, headers: List<Header>? = null, multipartBody: MultipartBody, listener: ProgressListener = { _, _ -> }, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
-    it.multiPartRequest(httpType, url, headers, listener, multipartBody)
+suspend fun sendKtorUpload(httpType: Int = POST, url: String, headers: List<Header>? = null,cookies: List<Cookie>?=null, multipartBody: MultipartBody, listener: ProgressListener = { _, _ -> }, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
+    it.multiPartRequest(httpType, url, headers,cookies, listener, multipartBody)
 }
 
 
@@ -121,27 +129,30 @@ suspend fun sendKtorUpload(httpType: Int = POST, url: String, headers: List<Head
  * @param appends @Body = FormUrlEncoded 时有数据
  * @return Any?
  */
-suspend inline fun sendKtorRequest(httpType: Int = GET, bodyType: Int = NONE, url: String, headers: List<Header>? = null, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
+suspend inline fun sendKtorRequest(httpType: Int = GET, bodyType: Int = NONE, url: String, headers: List<Header>? = null,cookies: List<Cookie>?=null, parameters: HttpRequestBuilder.() -> Unit = {}, requestBody: Any = EmptyContent, appends: ParametersBuilder.() -> Unit = {}, defaultConfig: DefaultConfig = DefaultConfig(EmptyString)) = ktorClient(defaultConfig).use {
     when (httpType) {
         GET    -> {
             when (bodyType) {
-                NONE           -> it.getRequest(url, headers) { parameters() }
-                TEXT           -> it.getRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
-                JSON           -> it.getRequest(url, headers) { setBody(requestBody) }
-                FormData       -> it.submitForm(url = url, Parameters.build(appends), encodeInQuery = true) { handleHeaders(headers) }
-                FormUrlEncoded -> it.getRequest(url, headers) { setBody(FormDataContent(Parameters.build(appends))) }
+                NONE           -> it.getRequest(url, headers,cookies) { parameters() }
+                TEXT           -> it.getRequest(url, headers?.plus(textHeader) ?: listOf(textHeader),cookies) { setBody(Gson().toJson(requestBody)) }
+                JSON           -> it.getRequest(url, headers,cookies) { setBody(requestBody) }
+                FormData       -> it.submitForm(url = url, Parameters.build(appends), encodeInQuery = true) {
+                    handlerCookies(cookies)
+                    handleHeaders(headers) }
+                FormUrlEncoded -> it.getRequest(url, headers,cookies) { setBody(FormDataContent(Parameters.build(appends))) }
                 else           -> throw RuntimeException("get other error")
             }
         }
         POST   -> {
             when (bodyType) {
-                NONE           -> it.postRequest(url, headers) { parameters() }
-                TEXT           -> it.postRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) { setBody(Gson().toJson(requestBody)) }
-                JSON           -> it.postRequest(url, headers) { setBody(requestBody) }
+                NONE           -> it.postRequest(url, headers,cookies) { parameters() }
+                TEXT           -> it.postRequest(url, headers?.plus(textHeader) ?: listOf(textHeader),cookies) { setBody(Gson().toJson(requestBody)) }
+                JSON           -> it.postRequest(url, headers,cookies) { setBody(requestBody) }
                 FormData       -> it.submitForm(url = url, Parameters.build(appends)) {
+                    handlerCookies(cookies)
                     handleHeaders(headers)
                 }
-                FormUrlEncoded -> it.postRequest(url, headers) {
+                FormUrlEncoded -> it.postRequest(url, headers,cookies) {
                     setBody(FormDataContent(Parameters.build(appends)))
                 }
                 else           -> throw RuntimeException("post other error")
@@ -149,17 +160,18 @@ suspend inline fun sendKtorRequest(httpType: Int = GET, bodyType: Int = NONE, ur
         }
         PATCH  -> {
             when (bodyType) {
-                NONE           -> it.patchRequest(url, headers) { parameters() }
-                TEXT           -> it.patchRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) {
+                NONE           -> it.patchRequest(url, headers,cookies) { parameters() }
+                TEXT           -> it.patchRequest(url, headers?.plus(textHeader) ?: listOf(textHeader),cookies) {
                     setBody(Gson().toJson(requestBody))
                 }
-                JSON           -> it.patchRequest(url, headers) {
+                JSON           -> it.patchRequest(url, headers,cookies) {
                     setBody(requestBody)
                 }
                 FormData       -> it.submitForm(url = url, Parameters.build(appends)) {
+                    handlerCookies(cookies)
                     handleHeaders(headers)
                 }
-                FormUrlEncoded -> it.patchRequest(url, headers) {
+                FormUrlEncoded -> it.patchRequest(url, headers,cookies) {
                     setBody(FormDataContent(Parameters.build(appends)))
                 }
                 else           -> throw RuntimeException("patch other error")
@@ -167,15 +179,16 @@ suspend inline fun sendKtorRequest(httpType: Int = GET, bodyType: Int = NONE, ur
         }
         DELETE -> {
             when (bodyType) {
-                NONE           -> it.deleteRequest(url, headers) { parameters() }
-                TEXT           -> it.deleteRequest(url, headers?.plus(textHeader) ?: listOf(textHeader)) {
+                NONE           -> it.deleteRequest(url, headers,cookies) { parameters() }
+                TEXT           -> it.deleteRequest(url, headers?.plus(textHeader) ?: listOf(textHeader),cookies) {
                     setBody(Gson().toJson(requestBody))
                 }
-                JSON           -> it.deleteRequest(url, headers) { setBody(requestBody) }
+                JSON           -> it.deleteRequest(url, headers,cookies) { setBody(requestBody) }
                 FormData       -> it.submitForm(url = url, Parameters.build(appends)) {
+                    handlerCookies(cookies)
                     handleHeaders(headers)
                 }
-                FormUrlEncoded -> it.deleteRequest(url, headers) {
+                FormUrlEncoded -> it.deleteRequest(url, headers,cookies) {
                     setBody(FormDataContent(Parameters.build(appends)))
                 }
                 else           -> throw RuntimeException("delete other error")

@@ -18,4 +18,4 @@ import com.hearthappy.annotations.Http
  * @property multiPartParameters List<ParameterData>? 上传文件
  * @constructor
  */
-data class RequestData(val requestClass: String, val http: Http, val url: String, val serviceConfigData: ServiceConfigData?, val headers: List<HeaderData>, val fixedHeaders: List<String>?, var methodParameters: List<ParameterData>, val requestParameters: List<String>, val requestBodyData: RequestBodyData, val order: String?, var streamingParameter: ParameterData?, val multiPartParameters: List<ParameterData>?)
+data class RequestData(val requestClass: String, val http: Http, val url: String, val serviceConfigData: ServiceConfigData?, val headers: List<HeaderData>, val fixedHeaders: List<String>?, var methodParameters: List<ParameterData>, val requestParameters: List<String>, val requestBodyData: RequestBodyData, val order: String?, var streamingParameter: ParameterData?, val multiPartParameters: List<ParameterData>?, val cookies: List<CookieData>)

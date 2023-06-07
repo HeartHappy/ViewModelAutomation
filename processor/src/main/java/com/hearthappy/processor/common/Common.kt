@@ -8,6 +8,7 @@ const val TAG_BODY = "@Body"
 const val TAG_QUERY = "@Query"
 const val TAG_BASE_CONFIG = "@BaseConfig"
 const val TAG_ORDER = "@Order"
+const val TAG_COOKIE = "@Cookie"
 
 const val KAPT_KOTLIN_GENERATED = "kapt.kotlin.generated"
 const val APPLICATION_PKG = "android.app"
@@ -34,6 +35,7 @@ const val NETWORK_DOWNLOAD = "sendKtorDownload"
 const val NETWORK_UPLOAD = "sendKtorUpload"
 const val NETWORK_CONTENT_TYPE = "ContentType"
 const val NETWORK_HEADER = "Header"
+const val NETWORK_Cookie = "Cookie"
 const val NETWORK_MultipartBody = "MultipartBody"
 
 //ktor package

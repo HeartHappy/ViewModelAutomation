@@ -1,14 +1,8 @@
 package com.hearthappy.processor
 
-import com.hearthappy.annotations.BindLiveData
-import com.hearthappy.annotations.BindStateFlow
-import com.hearthappy.annotations.BodyType
-import com.hearthappy.annotations.Http
+import com.hearthappy.annotations.*
 import com.hearthappy.processor.common.*
-import com.hearthappy.processor.model.HeaderData
-import com.hearthappy.processor.model.RequestData
-import com.hearthappy.processor.model.ServiceConfigData
-import com.hearthappy.processor.model.ViewModelData
+import com.hearthappy.processor.model.*
 import com.hearthappy.processor.tools.asKotlinClassName
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FunSpec
@@ -53,19 +47,19 @@ private fun FunSpec.Builder.generateMethodRequestScope(requestData: RequestData?
 
         streamingParameter?.let {
             requiredImport.add(NETWORK_DOWNLOAD)
-            generateRequestApi(NETWORK_DOWNLOAD, http, url = url, headers = headers, fixedHeaders = fixedHeaders, serviceConfigData = serviceConfigData, listener = it.parameterName)
+            generateRequestApi(NETWORK_DOWNLOAD, http, url = url, headers = headers, fixedHeaders = fixedHeaders,cookies=cookies, serviceConfigData = serviceConfigData, listener = it.parameterName)
             addStatement("},")
             return@apply
         }
         multiPartParameters?.takeIf { it.isNotEmpty() }?.let {
             requiredImport.add(NETWORK_UPLOAD)
-            generateRequestApi(NETWORK_UPLOAD, http, url = url, headers = headers, fixedHeaders = fixedHeaders, serviceConfigData = serviceConfigData, listener = it[1].parameterName, multipart = it[0].parameterName)
+            generateRequestApi(NETWORK_UPLOAD, http, url = url, headers = headers, fixedHeaders = fixedHeaders,cookies=cookies, serviceConfigData = serviceConfigData, listener = it[1].parameterName, multipart = it[0].parameterName)
             addStatement("},")
             return@apply
         }
 
         requiredImport.add(NETWORK_REQUEST)
-        generateRequestApi(NETWORK_REQUEST, http, requestBodyData.bodyType, url, headers, fixedHeaders, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
+        generateRequestApi(NETWORK_REQUEST, http, requestBodyData.bodyType, url, headers, fixedHeaders,cookies, requestParameters, requestBodyData.jsonParameterName, requestBodyData.xwfParameters, serviceConfigData)
         addStatement("},")
     } ?: let {
         requiredImport.add(NETWORK_REQUEST_SCOPE)
@@ -77,9 +71,10 @@ private fun RequestData.addRequiredImport(requiredImport: MutableList<String>) {
     requiredImport.add(http.name)
     requiredImport.add(requestBodyData.bodyType.name)
     if (headers.isNotEmpty() || fixedHeaders?.isNotEmpty() == true) requiredImport.add(NETWORK_HEADER)
+    if(cookies.isNotEmpty()) requiredImport.add(NETWORK_Cookie)
 }
 
-private fun FunSpec.Builder.generateRequestApi(sendApi: String, http: Http, bodyType: BodyType = BodyType.NONE, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?, listener: String? = null, multipart: String? = null) {
+private fun FunSpec.Builder.generateRequestApi(sendApi: String, http: Http, bodyType: BodyType = BodyType.NONE, url: String, headers: List<HeaderData>? = null, fixedHeaders: List<String>?,cookies: List<CookieData>? = null, parameters: List<String>? = null, requestBody: Any? = null, appends: Pair<String, Map<String, String>>? = null, serviceConfigData: ServiceConfigData?, listener: String? = null, multipart: String? = null) {
 
     addStatement("$sendApi(")
     if (requestBody != Http.GET) addStatement("httpType=${http}")
@@ -93,6 +88,14 @@ private fun FunSpec.Builder.generateRequestApi(sendApi: String, http: Http, body
         headers?.apply { for (header in this) addStatement("Header(\"${header.key}\",${header.parameterName}),") }
         addStatement(")")
     }
+
+    // TODO: 动态cookie
+    if(cookies?.isNotEmpty()==true){
+        addStatement(",cookies = listOf(")
+        cookies.apply { for (cookie in this) addStatement("Cookie(\"${cookie.key}\",${cookie.parameterName}),") }
+        addStatement(")")
+    }
+
 
     multipart?.apply { addStatement(",multipartBody=$this") }
 
