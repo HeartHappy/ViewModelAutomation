@@ -87,7 +87,7 @@ internal fun ViewModelProcessor.getRequestDataMap(roundEnv: RoundEnvironment, cr
 
             val requestData = RequestData(requestClass, httpType, requestUrl, findBaseConfig, headers, fixedHeaders, methodParameters, requestParameters, requestBodyData, order, streamingParameters, multiPartParameters, cookies)
             this[requestClass] = requestData
-            sendNoteMsg("【RequestData】:$requestData")
+//            sendNoteMsg("【RequestData】:$requestData")
         }
     }
 }
