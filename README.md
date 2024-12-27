@@ -1,5 +1,7 @@
 [![](https://jitpack.io/v/HeartHappy/viewmodelautomation.svg)](https://jitpack.io/#HeartHappy/viewmodelautomation)
 
+## 该框架不再维护，请迁移至ViewModelAutomationX版本，采用KSP+Retroift架构
+
 ## 自动生成ViewModel、网络请求框架
 
 #### 一、项目地址：[Github](https://github.com/HeartHappy/ViewModelAutomation)
